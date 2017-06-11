@@ -7,8 +7,6 @@ ABSOLUTE_SOURCES_ROOT := $(realpath $(SOURCES_ROOT))
 ABSOLUTE_BUILD_ROOT := $(realpath $(BUILD_ROOT))
 ABSOLUTE_PREFIX_ROOT := $(realpath $(PREFIX_ROOT))
 
-ZLIB_VERSION := v1.2.8
-
 ifeq "$(MAKE_MODE)" ""
 MAKE_MODE := release
 endif
@@ -22,12 +20,20 @@ endif
 # Save the current directory
 THIS_DIR := $(shell pwd)
 
-# Version files that should indicate that the build is successfull
-ZLIB_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_zlib
+define GIT_DOWNLOAD =
+$(1)_VERSION := $(2)
+$(1)_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_$(1)
+$(1)_SOURCE := $(3)
+$(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
+$(1): $$($(1)_VERSION_FILE)
 
-ZLIB_SOURCE := git://github.com/madler/zlib.git
+$$($(1)_FILE)/HEAD :
+	mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
+	echo Downloading $$($(1)_FILE)... && \
+	git clone -q --bare $$($(1)_SOURCE) `cygpath -w $$($(1)_FILE)`
+endef
 
-ZLIB_FILE := $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(ZLIB_SOURCE))
+$(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
 ifeq "$(OS)" "Darwin"
@@ -39,15 +45,6 @@ endif
 ifeq "$(OS)" "WINDOWS"
 JOPT := -j$(shell cat /proc/cpuinfo | grep processor | wc -l)
 endif
-
-zlib: $(ZLIB_VERSION_FILE)
-
-download : $(BOOST_FILE) $(CMAKE_FILE) $(ILMBASE_FILE) $(JPEG_FILE)/HEAD $(JSONCPP_FILE)/HEAD $(OCIO_FILE)/HEAD $(OIIO_FILE)/HEAD $(OPENEXR_FILE) $(PNG_FILE)/HEAD $(PYSTRING_FILE)/HEAD $(PYTHON_FILE) $(TIFF_FILE) $(ZLIB_FILE)/HEAD
-
-$(ZLIB_FILE)/HEAD :
-	@mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
-	echo Downloading $(ZLIB_FILE)... && \
-	git clone -q --bare $(ZLIB_SOURCE) $(ZLIB_FILE)
 
 # libz
 $(zlib_VERSION_FILE) : $(zlib_FILE)/HEAD
