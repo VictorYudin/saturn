@@ -52,6 +52,7 @@ endef
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,cmake,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,cmakebin,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmakebin_VERSION))).$$(word 2,$$(subst ., ,$$(cmakebin_VERSION)))/cmake-$$(cmakebin_VERSION)-win64-x64.zip))
+$(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$$(hdf5_VERSION)/src/hdf5-$$(hdf5_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
@@ -76,6 +77,8 @@ COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
 	-DCMAKE_CXX_FLAGS_DEBUG=/MTd \
 	-DCMAKE_CXX_FLAGS_RELEASE=/MT \
+	-DCMAKE_C_FLAGS_DEBUG=/MTd \
+	-DCMAKE_C_FLAGS_RELEASE=/MT \
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
@@ -121,7 +124,7 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	cd $(THIS_DIR) && \
 	echo $(BOOST_VERSION) > $@
 
-$(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(CMAKE) $(ilmbase_VERSION_FILE) $(openexr_VERSION_FILE) $(zlib_VERSION_FILE) $(alembic_FILE)/HEAD
+$(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(CMAKE) $(hdf5_VERSION_FILE) $(ilmbase_VERSION_FILE) $(openexr_VERSION_FILE) $(zlib_VERSION_FILE) $(alembic_FILE)/HEAD
 	@echo Building Alembic $(alembic_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf alembic && \
@@ -133,6 +136,7 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(CMAKE) $(ilmbase_VERSION_FILE)
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
+		-DHDF5_ROOT=$(WINDOWS_PREFIX_ROOT)/hdf5 \
 		-DALEMBIC_ILMBASE_LINK_STATIC:BOOL=ON \
 		-DALEMBIC_LIB_USES_BOOST:BOOL=ON \
 		-DALEMBIC_SHARED_LIBS:BOOL=OFF \
@@ -141,7 +145,7 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(CMAKE) $(ilmbase_VERSION_FILE)
 		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/alembic \
 		-DILMBASE_ROOT=$(WINDOWS_PREFIX_ROOT)/ilmbase \
 		-DUSE_BOOSTREGEX:BOOL=ON \
-		-DUSE_HDF5:BOOL=OFF \
+		-DUSE_HDF5:BOOL=ON \
 		-DUSE_MAYA:BOOL=OFF \
 		-DUSE_STATIC_BOOST:BOOL=$(USE_STATIC_BOOST) \
 		-DUSE_STATIC_HDF5:BOOL=ON \
@@ -177,6 +181,37 @@ $(cmake_VERSION_FILE) : $(cmake_FILE) $(cmakebin_FILE)
 		--target install \
 		--config Release && \
 	echo done
+
+# HDF5
+$(hdf5_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(hdf5_FILE)
+	@echo Building HDF5 $(hdf5_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf hdf5-$(hdf5_VERSION) && \
+	tar -xf $(ABSOLUTE_SOURCES_ROOT)/hdf5-$(hdf5_VERSION).tar.gz && \
+	cd hdf5-$(hdf5_VERSION) && \
+	( test $$OS != linux || if [ -f release_docs/USING_CMake.txt ] ; then cp release_docs/USING_CMake.txt release_docs/Using_CMake.txt ; fi ) && \
+	( if [ ! -f release_docs/USING_CMake.txt ] ; then touch release_docs/USING_CMake.txt ; fi ) && \
+	( if [ ! -f release_docs/Using_CMake.txt ] ; then touch release_docs/Using_CMake.txt ; fi ) && \
+	( printf '/H5_HAVE_TIMEZONE/s/1/0/\nw\nq' | ed -s config/cmake/ConfigureChecks.cmake ) && \
+	( printf '/"\/MD"/s/MD/MT/\nw\nq' | ed -s config/cmake/HDFMacros.cmake ) && \
+	mkdir build && cd build && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/hdf5 \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
+		-DZLIB_USE_EXTERNAL:BOOL=ON \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_hdf5.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_hdf5.txt 2>&1 && \
+	cd ../.. && \
+	rm -rf hdf5-$(hdf5_VERSION) && \
+	cd $(THIS_DIR) && \
+	echo $(hdf5_VERSION) > $@
 
 $(ilmbase_VERSION_FILE) : $(CMAKE) $(ilmbase_FILE)
 	@echo Building IlmBase $(ilmbase_VERSION) && \
