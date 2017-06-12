@@ -49,6 +49,8 @@ endef
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,cmake,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,cmakebin,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmakebin_VERSION))).$$(word 2,$$(subst ., ,$$(cmakebin_VERSION)))/cmake-$$(cmakebin_VERSION)-win64-x64.zip))
+$(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
@@ -64,6 +66,7 @@ endif
 
 CC := $(shell where cl)
 CXX := $(shell where cl)
+CMAKE := C:/Temp/saturn-build/lib/cmake/bin/cmake
 
 COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
@@ -75,7 +78,6 @@ COMMON_CMAKE_FLAGS :=\
 PYTHON_BIN := c:/Python27/python.exe
 PYTHON_VERSION_SHORT := 2.7
 PYTHON_ROOT := $(dir $(PYTHON_BIN))
-$(info $(PYTHON_ROOT))
 
 ifeq "$(BOOST_VERSION)" "1_55_0"
 BOOST_USERCONFIG := tools/build/v2/user-config.jam
@@ -135,6 +137,54 @@ $(cmake_VERSION_FILE) : $(cmake_FILE) $(cmakebin_FILE)
 		--target install \
 		--config Release && \
 	echo done
+
+$(ilmbase_VERSION_FILE) : $(CMAKE) $(ilmbase_FILE)
+	@echo Building IlmBase $(ilmbase_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf ilmbase-$(ilmbase_VERSION) && \
+	tar -xf $(ABSOLUTE_SOURCES_ROOT)/ilmbase-$(ilmbase_VERSION).tar.gz && \
+	cd ilmbase-$(ilmbase_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DCMAKE_INSTALL_PREFIX=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/ilmbase` \
+		-DNAMESPACE_VERSIONING:BOOL=ON \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_ilmbase.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_ilmbase.txt 2>&1 && \
+	cd .. && \
+	rm -rf ilmbase-$(ilmbase_VERSION) && \
+	cd $(THIS_DIR) && \
+	echo $(ilmbase_VERSION) > $@
+
+$(openexr_VERSION_FILE) : $(CMAKE) $(ilmbase_VERSION_FILE) $(zlib_VERSION_FILE) $(openexr_FILE)
+	@echo Building OpenEXR $(openexr_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf openexr-$(openexr_VERSION) && \
+	tar -xf $(ABSOLUTE_SOURCES_ROOT)/openexr-$(openexr_VERSION).tar.gz && \
+	cd openexr-$(openexr_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DCMAKE_INSTALL_PREFIX=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/openexr` \
+		-DILMBASE_PACKAGE_PREFIX:PATH=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/ilmbase` \
+		-DNAMESPACE_VERSIONING:BOOL=ON \
+		-DZLIB_ROOT:PATH=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/zlib` \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_openexr.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_openexr.txt 2>&1 && \
+	cd .. && \
+	rm -rf openexr-$(openexr_VERSION) && \
+	cp $(ABSOLUTE_PREFIX_ROOT)/ilmbase/lib/*.lib $(ABSOLUTE_PREFIX_ROOT)/openexr/lib && \
+	cd $(THIS_DIR) && \
+	echo $(openexr_VERSION) > $@
+
 
 # libz
 $(zlib_VERSION_FILE) : $(zlib_FILE)/HEAD
