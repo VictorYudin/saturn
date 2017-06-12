@@ -56,6 +56,7 @@ $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/re
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
+$(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
@@ -212,6 +213,29 @@ $(hdf5_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(hdf5_FILE)
 	rm -rf hdf5-$(hdf5_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(hdf5_VERSION) > $@
+
+# jsoncpp
+$(jsoncpp_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(jsoncpp_FILE)/HEAD
+	@echo Building jsoncpp $(jsoncpp_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf jsoncpp && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/jsoncpp.git jsoncpp && \
+	cd jsoncpp && \
+	git checkout -q $(jsoncpp_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/jsoncpp \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_jsoncpp.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_jsoncpp.txt 2>&1 && \
+	cd .. && \
+	rm -rf jsoncpp && \
+	cd $(THIS_DIR) && \
+	echo $(jsoncpp_VERSION) > $@
 
 $(ilmbase_VERSION_FILE) : $(CMAKE) $(ilmbase_FILE)
 	@echo Building IlmBase $(ilmbase_VERSION) && \
