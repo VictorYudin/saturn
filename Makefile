@@ -33,18 +33,108 @@ $$($(1)_FILE)/HEAD :
 	git clone -q --bare $$($(1)_SOURCE) `cygpath -w $$($(1)_FILE)`
 endef
 
+define CURL_DOWNLOAD =
+$(1)_VERSION := $(2)
+$(1)_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_$(1)
+$(1)_SOURCE := $(3)
+$(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
+$(1): $$($(1)_VERSION_FILE)
+
+$$($(1)_FILE) :
+	@mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
+	echo Downloading $$($(1)_FILE)... && \
+	curl -s -o $$@ -L $$($(1)_SOURCE)
+endef
+
+$(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,cmake,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,cmakebin,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmakebin_VERSION))).$$(word 2,$$(subst ., ,$$(cmakebin_VERSION)))/cmake-$$(cmakebin_VERSION)-win64-x64.zip))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
 ifeq "$(OS)" "Darwin"
-JOPT := -j$(shell sysctl -n machdep.cpu.thread_count)
+JOB_COUNT := $(shell sysctl -n machdep.cpu.thread_count)
 endif
 ifeq "$(OS)" "linux"
-JOPT := -j$(shell cat /sys/devices/system/cpu/cpu*/topology/thread_siblings | wc -l)
+JOB_COUNT := $(shell cat /sys/devices/system/cpu/cpu*/topology/thread_siblings | wc -l)
 endif
-ifeq "$(OS)" "WINDOWS"
-JOPT := -j$(shell cat /proc/cpuinfo | grep processor | wc -l)
+ifeq "$(OS)" "Windows_NT"
+JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
 endif
+
+CC := $(shell where cl)
+CXX := $(shell where cl)
+
+COMMON_CMAKE_FLAGS :=\
+	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
+	-DCMAKE_CXX_FLAGS_DEBUG=/MTd \
+	-DCMAKE_CXX_FLAGS_RELEASE=/MT \
+	-DCMAKE_INSTALL_LIBDIR=lib \
+	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
+
+PYTHON_BIN := c:/Python27/python.exe
+PYTHON_VERSION_SHORT := 2.7
+PYTHON_ROOT := $(dir $(PYTHON_BIN))
+$(info $(PYTHON_ROOT))
+
+ifeq "$(BOOST_VERSION)" "1_55_0"
+BOOST_USERCONFIG := tools/build/v2/user-config.jam
+else
+BOOST_USERCONFIG := tools/build/src/user-config.jam
+endif
+BOOST_LINK := static
+ifeq "$(BOOST_LINK)" "shared"
+USE_STATIC_BOOST := OFF
+else
+USE_STATIC_BOOST := ON
+endif
+$(boost_VERSION_FILE) : $(boost_FILE)
+	@echo Building boost $(boost_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(BUILD_ROOT) && \
+	echo rm -rf boost_$(boost_VERSION) && \
+	echo tar -xf $(ABSOLUTE_SOURCES_ROOT)/boost_$(boost_VERSION).tar.gz && \
+	cd boost_$(boost_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	echo 'using msvc : 14.1 : "$(CXX)" ;' > $(BOOST_USERCONFIG) && \
+	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_ROOT)/include" : "$(PYTHON_ROOT)/libs" ;' >> $(BOOST_USERCONFIG) && \
+	cmd /C bootstrap.bat msvc && \
+	./b2 \
+		--layout=system \
+		--prefix=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/boost` \
+		-j $(JOB_COUNT) \
+		link=$(BOOST_LINK) \
+		threading=multi \
+		runtime-link=static \
+		address-model=64 \
+		toolset=msvc-14.1 \
+		$(MAKE_MODE) \
+		stage \
+		install && \
+	cd .. && \
+	rm -rf boost_$(boost_VERSION) && \
+	cd $(THIS_DIR) && \
+	echo $(BOOST_VERSION) > $@
+
+$(cmake_VERSION_FILE) : $(cmake_FILE) $(cmakebin_FILE)
+	echo Unpacking cmake $(cmake_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	echo rm -rf cmake-$(cmake_VERSION) && \
+	echo rm -rf cmake-$(cmakebin_VERSION)-win64-x64 && \
+	echo tar -xf $(ABSOLUTE_SOURCES_ROOT)/cmake-$(cmake_VERSION).tar.gz && \
+	echo Unpacking cmake-bin $(cmakebin_VERSION) && \
+	echo unzip $(ABSOLUTE_SOURCES_ROOT)/cmake-$(cmakebin_VERSION)-win64-x64.zip && \
+	echo Building cmake $(cmake_VERSION) && \
+	cd cmake-$(cmake_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(ABSOLUTE_BUILD_ROOT)/cmake-$(cmakebin_VERSION)-win64-x64/bin/cmake \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/cmake` \
+		. && \
+	$(ABSOLUTE_BUILD_ROOT)/cmake-$(cmakebin_VERSION)-win64-x64/bin/cmake \
+		--build . \
+		--target install \
+		--config Release && \
+	echo done
 
 # libz
 $(zlib_VERSION_FILE) : $(zlib_FILE)/HEAD
