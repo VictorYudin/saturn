@@ -57,10 +57,11 @@ $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/re
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
-$(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
-$(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
+$(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
+$(eval $(call GIT_DOWNLOAD,oiio,Release-1.7.14,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,png,2b667e4,git://git.code.sf.net/p/libpng/code))
+$(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
 ifeq "$(OS)" "Darwin"
@@ -79,10 +80,10 @@ CMAKE := C:/Temp/saturn-build/lib/cmake/bin/cmake
 
 COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
-	-DCMAKE_CXX_FLAGS_DEBUG=/MTd \
-	-DCMAKE_CXX_FLAGS_RELEASE=/MT \
-	-DCMAKE_C_FLAGS_DEBUG=/MTd \
-	-DCMAKE_C_FLAGS_RELEASE=/MT \
+	-DCMAKE_CXX_FLAGS_DEBUG="/MTd /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
+	-DCMAKE_CXX_FLAGS_RELEASE="/MT /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
+	-DCMAKE_C_FLAGS_DEBUG="/MTd /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
+	-DCMAKE_C_FLAGS_RELEASE="/MT /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
@@ -285,6 +286,63 @@ $(ilmbase_VERSION_FILE) : $(CMAKE) $(ilmbase_FILE)
 	cd $(THIS_DIR) && \
 	echo $(ilmbase_VERSION) > $@
 
+
+# OpenImageIO
+# Edits:
+# - Defining OIIO_STATIC_BUILD to avoid specifying it everywhere
+# - std::locale segfault fix
+# - Python module
+$(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(CMAKE) $(ilmbase_VERSION_FILE) $(jpeg_VERSION_FILE) $(openexr_VERSION_FILE) $(png_VERSION_FILE) $(tiff_VERSION_FILE) $(zlib_VERSION_FILE) $(oiio_FILE)/HEAD
+	@echo Building OpenImageIO $(oiio_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf oiio && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/oiio.git oiio && \
+	cd oiio && \
+	git checkout -q $(oiio_VERSION) && \
+	( printf '/define OPENIMAGEIO_EXPORT_H/a\n#ifndef OIIO_STATIC_BUILD\n#define OIIO_STATIC_BUILD\n#endif\n.\nw\n' | ed -s src/include/OpenImageIO/export.h ) && \
+	( printf '/boost::algorithm::iequals/s/loc/std::locale::classic()/\nw\nq' | ed -s src/libutil/strutil.cpp ) && \
+	( printf '/USE_PYTHON OFF/d\nw\nq' | ed -s CMakeLists.txt ) && \
+	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s CMakeLists.txt ) && \
+	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s CMakeLists.txt ) && \
+	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s src/cmake/externalpackages.cmake ) && \
+	( printf '/CMAKE_FIND_LIBRARY_SUFFIXES .a/d\nw\nq' | ed -s CMakeLists.txt ) && \
+	( printf '/CMAKE_FIND_LIBRARY_SUFFIXES .a/d\nw\nq' | ed -s CMakeLists.txt ) && \
+	( printf '/libturbojpeg/s/libturbojpeg/turbojpeg-static/\nw\nq' | ed -s src/cmake/modules/FindJPEGTurbo.cmake ) && \
+	( printf '/OPENEXR_DLL/d\nw\nq' | ed -s CMakeLists.txt ) && \
+	( printf '/\/W1/d\nw\nq' | ed -s CMakeLists.txt ) && \
+	mkdir build && cd build && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DBOOST_ROOT=$(WINDOWS_PREFIX_ROOT)/boost \
+		-DBUILDSTATIC:BOOL=ON \
+		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/oiio \
+		-DILMBASE_HOME=$(WINDOWS_PREFIX_ROOT)/ilmbase \
+		-DJPEG_PATH=$(WINDOWS_PREFIX_ROOT)/jpeg \
+		-DLINKSTATIC:BOOL=ON \
+		-DOIIO_BUILD_TESTS:BOOL=OFF \
+		-DOPENEXR_HOME=$(WINDOWS_PREFIX_ROOT)/openexr \
+		-DPNG_LIBRARY=$(WINDOWS_PREFIX_ROOT)/png/lib/libpng16_static.lib \
+		-DPNG_PNG_INCLUDE_DIR=$(WINDOWS_PREFIX_ROOT)/png/include \
+		-DTIFF_INCLUDE_DIR=$(WINDOWS_PREFIX_ROOT)/tiff/include \
+		-DTIFF_LIBRARY=$(WINDOWS_PREFIX_ROOT)/tiff/lib/libtiff.lib \
+		-DUSE_FREETYPE:BOOL=OFF \
+		-DUSE_GIF:BOOL=OFF \
+		-DVERBOSE:BOOL=ON \
+		-DUSE_NUKE=OFF \
+		-DZLIB_ROOT=$(WINDOWS_PREFIX_ROOT)/zlib \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
+	cd ../.. && \
+	rm -rf oiio && \
+	cd $(THIS_DIR) && \
+	echo $(oiio_VERSION) > $@
+
+
 $(openexr_VERSION_FILE) : $(CMAKE) $(ilmbase_VERSION_FILE) $(zlib_VERSION_FILE) $(openexr_FILE)
 	@echo Building OpenEXR $(openexr_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -295,10 +353,10 @@ $(openexr_VERSION_FILE) : $(CMAKE) $(ilmbase_VERSION_FILE) $(zlib_VERSION_FILE) 
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
-		-DCMAKE_INSTALL_PREFIX=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/openexr` \
-		-DILMBASE_PACKAGE_PREFIX:PATH=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/ilmbase` \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/openexr \
+		-DILMBASE_PACKAGE_PREFIX:PATH=$(WINDOWS_PREFIX_ROOT)/ilmbase \
 		-DNAMESPACE_VERSIONING:BOOL=ON \
-		-DZLIB_ROOT:PATH=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/zlib` \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_openexr.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
