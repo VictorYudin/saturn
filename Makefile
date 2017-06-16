@@ -31,7 +31,7 @@ $(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
 $(1): $$($(1)_VERSION_FILE)
 
 $$($(1)_FILE)/HEAD :
-	mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
+	@mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
 	echo Downloading $$($(1)_FILE)... && \
 	git clone -q --bare $$($(1)_SOURCE) `cygpath -w $$($(1)_FILE)`
 endef
@@ -55,9 +55,12 @@ $(eval $(call CURL_DOWNLOAD,cmakebin,3.7.2,https://cmake.org/files/v$$(word 1,$$
 $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$$(hdf5_VERSION)/src/hdf5-$$(hdf5_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
 $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
+$(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
+$(eval $(call GIT_DOWNLOAD,png,2b667e4,git://git.code.sf.net/p/libpng/code))
 
 # Number or processors
 ifeq "$(OS)" "Darwin"
@@ -200,7 +203,6 @@ $(hdf5_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(hdf5_FILE)
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
-		-DBUILD_SHARED_LIBS:BOOL=OFF \
 		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/hdf5 \
 		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
 		-DZLIB_USE_EXTERNAL:BOOL=ON \
@@ -213,6 +215,30 @@ $(hdf5_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(hdf5_FILE)
 	rm -rf hdf5-$(hdf5_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(hdf5_VERSION) > $@
+
+# jpeg
+$(jpeg_VERSION_FILE) : $(CMAKE) $(jpeg_FILE)/HEAD
+	@echo Building jpeg $(jpeg_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf jpeg && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/libjpeg-turbo.git jpeg && \
+	cd jpeg && \
+	git checkout -q $(jpeg_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DENABLE_SHARED:BOOL=OFF \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/jpeg \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_jpeg.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_jpeg.txt 2>&1 && \
+	cd .. && \
+	rm -rf jpeg && \
+	cd $(THIS_DIR) && \
+	echo $(jpeg_VERSION) > $@
+
 
 # jsoncpp
 $(jsoncpp_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(jsoncpp_FILE)/HEAD
@@ -281,6 +307,59 @@ $(openexr_VERSION_FILE) : $(CMAKE) $(ilmbase_VERSION_FILE) $(zlib_VERSION_FILE) 
 	cd .. && \
 	rm -rf openexr-$(openexr_VERSION) && \
 	cp $(ABSOLUTE_PREFIX_ROOT)/ilmbase/lib/*.lib $(ABSOLUTE_PREFIX_ROOT)/openexr/lib && \
+	cd $(THIS_DIR) && \
+	echo $(openexr_VERSION) > $@
+
+
+# png
+$(png_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(png_FILE)/HEAD
+	@echo Building png $(png_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf png && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/code png && \
+	cd png && \
+	git checkout -q $(png_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DPNG_SHARED:BOOL=OFF \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/png \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_png.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_png.txt 2>&1 && \
+	cd .. && \
+	rm -rf png && \
+	cd $(THIS_DIR) && \
+	echo $(png_VERSION) > $@
+
+
+$(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(zlib_VERSION_FILE)
+	@echo Building tiff $(tiff_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf tiff-$(tiff_VERSION) && \
+	tar -xf $(ABSOLUTE_SOURCES_ROOT)/tiff-$(tiff_VERSION).tar.gz && \
+	cd tiff-$(tiff_VERSION) && \
+	( printf '/OPTFLAGS/s/MD/MT/\nw\nq' | ed -s nmake.opt ) && \
+	nmake /f Makefile.vc \
+		JPEG_SUPPORT=1 \
+		JPEG_INCLUDE=-I$(WINDOWS_PREFIX_ROOT)/jpeg/include \
+		JPEG_LIB="$(WINDOWS_PREFIX_ROOT)/jpeg/lib/jpeg-static.lib $(WINDOWS_PREFIX_ROOT)/zlib/lib/z.lib" \
+		ZLIB_SUPPORT=1 \
+		ZLIB_INCLUDE=-I$(WINDOWS_PREFIX_ROOT)/zlib/include \
+		ZLIB_LIB=$(WINDOWS_PREFIX_ROOT)/zlib/lib/z.lib > $(ABSOLUTE_PREFIX_ROOT)/log_tiff.txt 2>&1 && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/bin && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/include && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
+	cp tools/*.exe $(ABSOLUTE_PREFIX_ROOT)/tiff/bin && \
+	cp libtiff/libtiff.lib $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
+	cp libtiff/libtiff.pdb $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
+	cp libtiff/libtiff.ilk $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
+	cp libtiff/*.h* $(ABSOLUTE_PREFIX_ROOT)/tiff/include && \
+	cd .. && \
+	rm -rf tiff-$(tiff_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(openexr_VERSION) > $@
 
