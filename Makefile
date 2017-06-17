@@ -52,11 +52,14 @@ endef
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,cmake,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,cmakebin,3.7.2,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmakebin_VERSION))).$$(word 2,$$(subst ., ,$$(cmakebin_VERSION)))/cmake-$$(cmakebin_VERSION)-win64-x64.zip))
+$(eval $(call CURL_DOWNLOAD,glew,2.0.0,https://sourceforge.net/projects/glew/files/glew/$$(glew_VERSION)/glew-$$(glew_VERSION).tgz))
+$(eval $(call CURL_DOWNLOAD,glut,3.0.0,https://sourceforge.net/projects/freeglut/files/freeglut/$$(glut_VERSION)/freeglut-$$(glut_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$$(hdf5_VERSION)/src/hdf5-$$(hdf5_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
+$(eval $(call GIT_DOWNLOAD,glfw,3.2.1,git://github.com/glfw/glfw.git))
 $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
 $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.7.14,git://github.com/OpenImageIO/oiio.git))
@@ -186,6 +189,86 @@ $(cmake_VERSION_FILE) : $(cmake_FILE) $(cmakebin_FILE)
 		--target install \
 		--config Release && \
 	echo done
+
+
+# glew
+# Edits:
+# - define GLEW_STATIC
+# link glewinfo and visualinfo statically
+$(glew_VERSION_FILE) : $(CMAKE) $(glew_FILE)
+	@echo Building glew $(glew_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(glew_FILE))) && \
+	tar zxf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(glew_FILE)) && \
+	cd $(notdir $(basename $(glew_FILE))) && \
+	( printf "0a\n#define GLEW_STATIC\n.\nw\nq\n" | ed -s include/GL/glew.h ) && \
+	( printf "0a\n#define GLEW_STATIC\n.\nw\nq\n" | ed -s include/GL/wglew.h ) && \
+	( printf "/target_link_libraries.*glewinfo/s/glew)/glew_s)/\nw\nq" | ed -s build/cmake/CMakeLists.txt ) && \
+	( printf "/target_link_libraries.*visualinfo/s/glew)/glew_s)/\nw\nq" | ed -s build/cmake/CMakeLists.txt ) && \
+	( printf "/CMAKE_DEBUG_POSTFIX/d\nw\nq" | ed -s build/cmake/CMakeLists.txt ) && \
+	cd build && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/glew \
+		./cmake > $(ABSOLUTE_PREFIX_ROOT)/log_glew.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glew.txt 2>&1 && \
+	cd ../.. && \
+	rm -rf $(notdir $(basename $(glew_FILE))) && \
+	cd $(THIS_DIR) && \
+	echo $(glew_VERSION) > $@
+
+
+# glfw
+$(glfw_VERSION_FILE) : $(CMAKE) $(glfw_FILE)/HEAD
+	@echo Building glfw $(glfw_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(glfw_FILE))) && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/$(notdir $(glfw_FILE)) $(notdir $(basename $(glfw_FILE))) && \
+	cd $(notdir $(basename $(glfw_FILE))) && \
+	git checkout -q $(glfw_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DGLFW_BUILD_DOCS:BOOL=OFF \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/glfw \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_glfw.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glfw.txt 2>&1 && \
+	cd .. && \
+	rm -rf $(notdir $(basename $(glfw_FILE))) && \
+	cd $(THIS_DIR) && \
+	echo $(glfw_VERSION) > $@
+
+
+# glut
+$(glut_VERSION_FILE) : $(CMAKE) $(glut_FILE)
+	@echo Building glut $(glut_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(basename $(glut_FILE)))) && \
+	tar -xf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(glut_FILE)) && \
+	cd $(notdir $(basename $(basename $(glut_FILE)))) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/glut \
+		-DFREEGLUT_BUILD_DEMOS:BOOL=OFF \
+		-DFREEGLUT_BUILD_SHARED_LIBS:BOOL=OFF \
+		-DINSTALL_PDB:BOOL=ON \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_glut.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glut.txt 2>&1 && \
+	cd .. && \
+	rm -rf $(notdir $(basename $(basename $(glut_FILE)))) && \
+	cd $(THIS_DIR) && \
+	echo $(glut_VERSION) > $@
+
 
 # HDF5
 $(hdf5_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(hdf5_FILE)
