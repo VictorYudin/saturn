@@ -57,13 +57,16 @@ $(eval $(call CURL_DOWNLOAD,glut,3.0.0,https://sourceforge.net/projects/freeglut
 $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$$(hdf5_VERSION)/src/hdf5-$$(hdf5_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,tbb,2017_20161128oss,https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb$$(tbb_VERSION)_src.tgz))
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
 $(eval $(call GIT_DOWNLOAD,glfw,3.2.1,git://github.com/glfw/glfw.git))
 $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
 $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.7.14,git://github.com/OpenImageIO/oiio.git))
+$(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,png,2b667e4,git://git.code.sf.net/p/libpng/code))
+$(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
@@ -81,12 +84,14 @@ CC := $(shell where cl)
 CXX := $(shell where cl)
 CMAKE := C:/Temp/saturn-build/lib/cmake/bin/cmake
 
+DEFINES = /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB /DPTEX_STATIC
+
 COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
-	-DCMAKE_CXX_FLAGS_DEBUG="/MTd /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
-	-DCMAKE_CXX_FLAGS_RELEASE="/MT /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
-	-DCMAKE_C_FLAGS_DEBUG="/MTd /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
-	-DCMAKE_C_FLAGS_RELEASE="/MT /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB" \
+	-DCMAKE_CXX_FLAGS_DEBUG="/MTd $(DEFINES)" \
+	-DCMAKE_CXX_FLAGS_RELEASE="/MT $(DEFINES)" \
+	-DCMAKE_C_FLAGS_DEBUG="/MTd $(DEFINES)" \
+	-DCMAKE_C_FLAGS_RELEASE="/MT $(DEFINES)" \
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
@@ -452,6 +457,44 @@ $(openexr_VERSION_FILE) : $(CMAKE) $(ilmbase_VERSION_FILE) $(zlib_VERSION_FILE) 
 	echo $(openexr_VERSION) > $@
 
 
+# OpenSubdiv
+$(opensubd_VERSION_FILE) : $(CMAKE) $(glew_VERSION_FILE) $(glfw_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(zlib_VERSION_FILE) $(opensubd_FILE)/HEAD
+	@echo Building OpenSubdiv $(opensubd_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(opensubd_FILE))) && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/$(notdir $(opensubd_FILE)) $(notdir $(basename $(opensubd_FILE))) && \
+	cd $(notdir $(basename $(opensubd_FILE))) && \
+	git checkout -q $(opensubd_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	( printf "/osd_dynamic_cpu/s/osd_dynamic_cpu/osd_static_gpu/\nw\nq" | ed -s CMakeLists.txt ) && \
+	( printf "/osd_dynamic_gpu/s/osd_dynamic_gpu/osd_static_cpu/\nw\nq" | ed -s CMakeLists.txt ) && \
+	( printf "/if.*NOT.*NOT/s/(/( 0 AND /\nw\nq" | ed -s opensubdiv/CMakeLists.txt ) && \
+	( printf "/\/WX/d\nw\nq" | ed -s CMakeLists.txt ) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/opensubdiv \
+		-DGLFW_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/glfw \
+		-DGLEW_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/glew \
+		-DNO_GLTESTS:BOOL=ON \
+		-DNO_TESTS:BOOL=ON \
+		-DNO_TUTORIALS:BOOL=ON \
+		-DMSVC_STATIC_CRT:BOOL=ON \
+		-DPTEX_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/ptex \
+		-DPYTHON_EXECUTABLE=C:/Python27/python.exe \
+		-DTBB_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/tbb \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
+		-DNO_OMP=1 \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_opensubdiv.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_opensubdiv.txt 2>&1 && \
+	cd .. && \
+	rm -rf $(notdir $(basename $(opensubd_FILE))) && \
+	cd $(THIS_DIR) && \
+	echo $(opensubd_VERSION) > $@
+
+
 # png
 $(png_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(png_FILE)/HEAD
 	@echo Building png $(png_VERSION) && \
@@ -475,6 +518,59 @@ $(png_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(png_FILE)/HEAD
 	rm -rf png && \
 	cd $(THIS_DIR) && \
 	echo $(png_VERSION) > $@
+
+
+# Ptex
+$(ptex_VERSION_FILE) : $(CMAKE) $(ptex_FILE)/HEAD
+	@echo Building Ptex $(ptex_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(ptex_FILE))) && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/$(notdir $(ptex_FILE)) $(notdir $(basename $(ptex_FILE))) && \
+	cd $(notdir $(basename $(ptex_FILE))) && \
+	git checkout -q $(ptex_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	( printf "2a\n#define PTEX_STATIC\n.\nw\nq\n" | ed -s src/ptex/Ptexture.h ) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/ptex \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
+	cd .. && \
+	rm $(ABSOLUTE_PREFIX_ROOT)/ptex/lib/*.dll && \
+	rm -rf $(notdir $(basename $(ptex_FILE))) && \
+	cd $(THIS_DIR) && \
+	echo $(ptex_VERSION) > $@
+
+
+# tbb
+$(tbb_VERSION_FILE) : $(tbb_FILE)
+	@echo Building tbb $(tbb_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf tbb$(tbb_VERSION) && \
+	tar zxf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(tbb_FILE)) && \
+	cd tbb$(tbb_VERSION) && \
+	cmd /C msbuild build/vs2012/makefile.sln \
+		/p:configuration=$(CMAKE_BUILD_TYPE)-MT \
+		/p:platform=x64 \
+		/p:PlatformToolset=v141 > $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
+	cp -R include/tbb $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
+	cmd /C link /lib /machine:x64 /out:tbb.lib \
+		build/vs2012/x64/tbb/$(CMAKE_BUILD_TYPE)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+	cmd /C link /lib /machine:x64 /out:tbbmalloc.lib \
+		build/vs2012/x64/tbbmalloc/$(CMAKE_BUILD_TYPE)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+	cmd /C link /lib /machine:x64 /out:tbbmalloc_proxy.lib \
+		build/vs2012/x64/tbbmalloc_proxy/$(CMAKE_BUILD_TYPE)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
+	cp *.lib $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
+	cd .. && \
+	rm -rf tbb$(tbb_VERSION) && \
+	cd $(THIS_DIR) && \
+	echo $(tbb_VERSION) > $@
 
 
 $(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(zlib_VERSION_FILE)
