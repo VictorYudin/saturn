@@ -67,6 +67,7 @@ $(eval $(call GIT_DOWNLOAD,oiio,Release-1.7.14,git://github.com/OpenImageIO/oiio
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,png,2b667e4,git://git.code.sf.net/p/libpng/code))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
+$(eval $(call GIT_DOWNLOAD,usd,dev,git://github.com/PixarAnimationStudios/USD))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
@@ -84,9 +85,26 @@ CC := $(shell where cl)
 CXX := $(shell where cl)
 CMAKE := C:/Temp/saturn-build/lib/cmake/bin/cmake
 
-DEFINES = /DBOOST_ALL_NO_LIB /DBOOST_PYTHON_STATIC_LIB /DPTEX_STATIC
+BOOST_LINK := static
+ifeq "$(BOOST_LINK)" "shared"
+USE_STATIC_BOOST := OFF
+BUILD_MAYA_PLUGIN := ON
+else
+USE_STATIC_BOOST := ON
+BUILD_MAYA_PLUGIN := OFF
+endif
+
+DEFINES = /DBOOST_ALL_NO_LIB /DPTEX_STATIC
+
+ifeq "$(BOOST_LINK)" "shared"
+DEFINES += /DBOOST_ALL_DYN_LINK
+else
+DEFINES += /DBOOST_ALL_STATIC_LINK
+DEFINES += /DBOOST_PYTHON_STATIC_LIB
+endif
 
 COMMON_CMAKE_FLAGS :=\
+	-G "Visual Studio 15 2017 Win64" \
 	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
 	-DCMAKE_CXX_FLAGS_DEBUG="/MTd $(DEFINES)" \
 	-DCMAKE_CXX_FLAGS_RELEASE="/MT $(DEFINES)" \
@@ -95,7 +113,13 @@ COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
-PYTHON_BIN := c:/Python27/python.exe
+all: usd
+
+ifeq "$(BOOST_LINK)" "shared"
+PYTHON_BIN := "C:\Program Files\Autodesk\Maya2016\bin\mayapy.exe"
+else
+PYTHON_BIN := C:/Python27/python.exe
+endif
 PYTHON_VERSION_SHORT := 2.7
 PYTHON_ROOT := $(dir $(PYTHON_BIN))
 
@@ -104,21 +128,16 @@ BOOST_USERCONFIG := tools/build/v2/user-config.jam
 else
 BOOST_USERCONFIG := tools/build/src/user-config.jam
 endif
-BOOST_LINK := static
-ifeq "$(BOOST_LINK)" "shared"
-USE_STATIC_BOOST := OFF
-else
-USE_STATIC_BOOST := ON
-endif
 $(boost_VERSION_FILE) : $(boost_FILE)
 	@echo Building boost $(boost_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(BUILD_ROOT) && \
-	echo rm -rf boost_$(boost_VERSION) && \
-	echo tar -xf $(ABSOLUTE_SOURCES_ROOT)/boost_$(boost_VERSION).tar.gz && \
+	rm -rf boost_$(boost_VERSION) && \
+	tar -xf $(ABSOLUTE_SOURCES_ROOT)/boost_$(boost_VERSION).tar.gz && \
 	cd boost_$(boost_VERSION) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	echo 'using msvc : 14.1 : "$(CXX)" ;' > $(BOOST_USERCONFIG) && \
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_ROOT)/include" : "$(PYTHON_ROOT)/libs" ;' >> $(BOOST_USERCONFIG) && \
+	( printf '/handle-static-runtime/\n/EXIT/d\nw\nq' | ed -s Jamroot ) && \
 	cmd /C bootstrap.bat msvc && \
 	./b2 \
 		--layout=system \
@@ -154,6 +173,7 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(CMAKE) $(hdf5_VERSION_FILE) $(
 		-DALEMBIC_LIB_USES_BOOST:BOOL=ON \
 		-DALEMBIC_SHARED_LIBS:BOOL=OFF \
 		-DBOOST_ROOT:STRING=$(WINDOWS_PREFIX_ROOT)/boost \
+		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
 		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/alembic \
 		-DILMBASE_ROOT=$(WINDOWS_PREFIX_ROOT)/ilmbase \
@@ -316,7 +336,9 @@ $(jpeg_VERSION_FILE) : $(CMAKE) $(jpeg_FILE)/HEAD
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
+		-G "NMake Makefiles" \
 		-DENABLE_SHARED:BOOL=OFF \
+		-DENABLE_STATIC:BOOL=ON \
 		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/jpeg \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_jpeg.txt 2>&1 && \
 	$(CMAKE) \
@@ -403,6 +425,7 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(CMAKE) $(ilmbase_VERSION_FILE) $(
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBOOST_ROOT=$(WINDOWS_PREFIX_ROOT)/boost \
+		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DBUILDSTATIC:BOOL=ON \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/oiio \
@@ -470,6 +493,7 @@ $(opensubd_VERSION_FILE) : $(CMAKE) $(glew_VERSION_FILE) $(glfw_VERSION_FILE) $(
 	( printf "/osd_dynamic_gpu/s/osd_dynamic_gpu/osd_static_cpu/\nw\nq" | ed -s CMakeLists.txt ) && \
 	( printf "/if.*NOT.*NOT/s/(/( 0 AND /\nw\nq" | ed -s opensubdiv/CMakeLists.txt ) && \
 	( printf "/\/WX/d\nw\nq" | ed -s CMakeLists.txt ) && \
+	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/FindGLEW.cmake ) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/opensubdiv \
@@ -480,7 +504,7 @@ $(opensubd_VERSION_FILE) : $(CMAKE) $(glew_VERSION_FILE) $(glfw_VERSION_FILE) $(
 		-DNO_TUTORIALS:BOOL=ON \
 		-DMSVC_STATIC_CRT:BOOL=ON \
 		-DPTEX_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/ptex \
-		-DPYTHON_EXECUTABLE=C:/Python27/python.exe \
+		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
 		-DTBB_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/tbb \
 		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
 		-DNO_OMP=1 \
@@ -599,6 +623,94 @@ $(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(
 	rm -rf tiff-$(tiff_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(openexr_VERSION) > $@
+
+DYNAMIC_EXT := .lib
+BOOST_NAMESPACE := boost
+ifeq "$(BOOST_LINK)" "shared"
+BOOST_PREFIX :=
+else
+BOOST_PREFIX := lib
+endif
+OIIO_LIBS := \
+	C:/Temp/saturn-build/lib/png/lib/libpng16_static.lib \
+	C:/Temp/saturn-build/lib/tiff/lib/libtiff.lib \
+	C:/Temp/saturn-build/lib/jpeg/lib/turbojpeg-static.lib \
+	C:/Temp/saturn-build/lib/openexr/lib/IlmImf-2_2.lib \
+	C:/Temp/saturn-build/lib/openexr/lib/Imath-2_2.lib \
+	C:/Temp/saturn-build/lib/openexr/lib/Iex-2_2.lib \
+	C:/Temp/saturn-build/lib/openexr/lib/Half.lib \
+	C:/Temp/saturn-build/lib/openexr/lib/IlmThread-2_2.lib \
+	C:/Temp/saturn-build/lib/ptex/lib/Ptex.lib \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT) \
+	C:/Temp/saturn-build/lib/zlib/lib/z.lib
+
+TBB_LIBRARY := $(WINDOWS_PREFIX_ROOT)/tbb/lib
+TBB_ROOT_DIR := $(WINDOWS_PREFIX_ROOT)/tbb/include
+MAYA_ROOT := "C:/Program Files/Autodesk/Maya2016"
+
+$(usd_VERSION_FILE) : $(alembic_VERSION_FILE) $(boost_VERSION_FILE) $(CMAKE) $(glut_VERSION_FILE) $(ilmbase_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
+	@echo Building usd $(usd_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(usd_FILE))) && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/$(notdir $(usd_FILE)) $(notdir $(basename $(usd_FILE))) && \
+	cd $(notdir $(basename $(usd_FILE))) && \
+	git checkout -q $(usd_VERSION) && \
+	( for f in $(OIIO_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES $$f)\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
+	( printf "/find_library.*OPENEXR_.*_LIBRARY/a\nNAMES\n\044{OPENEXR_LIB}-2_2\n.\nw\nq" | ed -s cmake/modules/FindOpenEXR.cmake ) && \
+	( printf "/HDF5 REQUIRED/+\nd\nd\nd\nw\nq" | ed -s cmake/defaults/Packages.cmake ) && \
+	( printf "/BOOST_ALL_DYN_LINK/d\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
+	( printf "/OPENEXR_DLL/d\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
+	( printf "/Program Files.*Maya2017/d\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
+	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/lib/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
+	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/modules/FindGLEW.cmake ) && \
+	mkdir -p build && cd build && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DALEMBIC_DIR=$(WINDOWS_PREFIX_ROOT)/alembic \
+		-DBOOST_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/boost \
+		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/usd \
+		-DGLEW_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/glew \
+		-DGLFW_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/glfw \
+		-DGLUT_Xmu_LIBRARY= \
+		-DHDF5_ROOT=$(WINDOWS_PREFIX_ROOT)/hdf5 \
+		-DMAYA_LOCATION:PATH=$(MAYA_ROOT) \
+		-DPYSIDE_BIN_DIR:PATH=$(MAYA_ROOT)/bin \
+		-DOIIO_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/oiio \
+		-DOPENEXR_BASE_DIR:PATH=$(WINDOWS_PREFIX_ROOT)/ilmbase \
+		-DOPENEXR_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/openexr \
+		-DOPENSUBDIV_ROOT_DIR:PATH=$(WINDOWS_PREFIX_ROOT)/opensubdiv \
+		-DPTEX_LOCATION:PATH=$(WINDOWS_PREFIX_ROOT)/ptex \
+		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=ON \
+		-DPXR_BUILD_IMAGING:BOOL=ON \
+		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_MAYA_PLUGIN) \
+		-DPXR_BUILD_MONOLITHIC:BOOL=ON \
+		-DPXR_BUILD_TESTS:BOOL=OFF \
+		-DPXR_BUILD_USD_IMAGING:BOOL=ON \
+		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
+		-DTBB_LIBRARY=$(TBB_LIBRARY) \
+		-DTBB_ROOT_DIR=$(TBB_ROOT_DIR) \
+		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
+		-D_GLUT_INC_DIR:PATH=$(WINDOWS_PREFIX_ROOT)/glut/include \
+		-D_GLUT_glut_LIB_DIR:PATH=$(WINDOWS_PREFIX_ROOT)/glut/lib \
+		.. && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) && \
+	cd ../.. && \
+	rm -rf $(notdir $(basename $(usd_FILE))) && \
+	cd $(THIS_DIR) && \
+	echo $(usd_VERSION) > $@
 
 
 # libz
