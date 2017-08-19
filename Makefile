@@ -22,6 +22,7 @@ endif
 
 # Save the current directory
 THIS_DIR := $(shell pwd)
+WINDOWS_THIS_DIR := `cygpath -w $(THIS_DIR)`
 
 define GIT_DOWNLOAD =
 $(1)_VERSION := $(2)
@@ -67,8 +68,9 @@ $(eval $(call GIT_DOWNLOAD,oiio,Release-1.7.14,git://github.com/OpenImageIO/oiio
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,png,2b667e4,git://git.code.sf.net/p/libpng/code))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
-$(eval $(call GIT_DOWNLOAD,usd,dev,git://github.com/PixarAnimationStudios/USD))
+$(eval $(call GIT_DOWNLOAD,usd,v0.7.6,git://github.com/PixarAnimationStudios/USD))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
+$(eval $(call GIT_DOWNLOAD,embree,v2.16.4,git://github.com/madler/embree.git))
 
 # Number or processors
 ifeq "$(OS)" "Darwin"
@@ -215,6 +217,36 @@ $(cmake_VERSION_FILE) : $(cmake_FILE) $(cmakebin_FILE)
 		--config Release && \
 	echo done
 
+#embree 
+$(embree_VERSION_FILE) : $(CMAKE) $(zlib_VERSION_FILE) $(embree_FILE)/HEAD
+	@echo Building embree $(embree_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf embree && \
+	git clone -q --no-checkout $(WINDOWS_SOURCES_ROOT)/embree.git embree && \
+	cd embree && \
+	git checkout -q $(embree_VERSION) && \
+	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_INCLUDE_DIR $(WINDOWS_PREFIX_ROOT)/tbb/include)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY $(WINDOWS_PREFIX_ROOT)/tbb/lib/tbb.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY_MALLOC $(WINDOWS_PREFIX_ROOT)/tbb/lib/tbbmalloc.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/INSTALL(PROGRAMS/d\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/INSTALL(PROGRAMS/d\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DEMBREE_STATIC_LIB:BOOL=OFF \
+		-DCMAKE_INSTALL_PREFIX=$(WINDOWS_PREFIX_ROOT)/embree \
+		-DTBB_INCLUDE_DIR=$(WINDOWS_PREFIX_ROOT)/tbb/include \
+		-DTBB_LIBRARY=$(WINDOWS_PREFIX_ROOT)/tbb/lib/tbb.lib \
+		-DTBB_LIBRARY_MALLOC=$(WINDOWS_PREFIX_ROOT)/tbb/lib/tbbmalloc.lib \
+		. && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) && \
+	cd .. && \
+	rm -rf embree && \
+	cd $(THIS_DIR) && \
+	echo $(embree_VERSION) > $@
 
 # glew
 # Edits:
@@ -670,6 +702,11 @@ $(usd_VERSION_FILE) : $(alembic_VERSION_FILE) $(boost_VERSION_FILE) $(CMAKE) $(g
 	( printf "/Program Files.*Maya2017/d\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
 	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/lib/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
 	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/modules/FindGLEW.cmake ) && \
+	echo Dont skip plugins when building static libraries... && \
+	( printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	( printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	echo ">>>" Catmull-Clark is default subdivision scheme for all the alembics. It's temporary, while Hydra doesn't consider normals... && \
+	( printf "/UsdGeomTokens->subdivisionScheme/+2\ns/none/catmullClark/\nw\nq" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
@@ -693,7 +730,7 @@ $(usd_VERSION_FILE) : $(alembic_VERSION_FILE) $(boost_VERSION_FILE) $(CMAKE) $(g
 		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_IMAGING:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_MAYA_PLUGIN) \
-		-DPXR_BUILD_MONOLITHIC:BOOL=ON \
+		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_MAYA_PLUGIN) \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=ON \
 		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
@@ -702,11 +739,11 @@ $(usd_VERSION_FILE) : $(alembic_VERSION_FILE) $(boost_VERSION_FILE) $(CMAKE) $(g
 		-DZLIB_ROOT:PATH=$(WINDOWS_PREFIX_ROOT)/zlib \
 		-D_GLUT_INC_DIR:PATH=$(WINDOWS_PREFIX_ROOT)/glut/include \
 		-D_GLUT_glut_LIB_DIR:PATH=$(WINDOWS_PREFIX_ROOT)/glut/lib \
-		.. && \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) && \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt && \
 	cd ../.. && \
 	rm -rf $(notdir $(basename $(usd_FILE))) && \
 	cd $(THIS_DIR) && \
