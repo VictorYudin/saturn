@@ -1,0 +1,60 @@
+image: Previous Visual Studio 2017
+platform: x64
+configuration: Release
+
+# clone directory
+clone_folder: c:\projects\saturn
+
+install:
+    - cmd: set PATH=C:\Program Files\Git\cmd;C:\cygwin64\bin;C:\Program Files (x86)\CMake\bin;C:\Windows\System32;C:\Windows\System32\wbem
+
+    # Python
+    - cmd: curl https://www.python.org/ftp/python/2.7.13/python-2.7.13.amd64.msi -o python.msi
+    - cmd: msiexec /a python.msi /qb TARGETDIR=C:\projects\saturn\python
+
+    # GNU ed
+    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/ed/ed-1.14.1-1.tar.xz -o ed.tar.xz
+    - cmd: tar -xf ed.tar.xz
+
+    # unzip
+    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/unzip/unzip-6.0-17.tar.xz -o unzip.tar.xz
+    - cmd: tar -xf unzip.tar.xz
+
+    # nasm
+    - cmd: curl http://www.nasm.us/pub/nasm/releasebuilds/2.13.01/win64/nasm-2.13.01-win64.zip -o nasm.zip
+    - cmd: usr\bin\unzip nasm.zip
+    - cmd: chmod -R u+x nasm-2.13.01/nasm.exe
+    - cmd: nasm-2.13.01\nasm.exe --version
+
+    # jom
+    - cmd: curl --tlsv1.2 -o jom.tar.xz -L https://github.com/VictorYudin/saturn-jom/releases/download/1.0.5/jom-v1.1.2.tar.xz
+    - cmd: tar -xf jom.tar.xz
+
+    # Put them to PATH
+    - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.13.01;C:\projects\saturn\jom\bin
+
+    # MSVC environment
+    - cmd: '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
+
+    # Maya 2016 devkit
+    - cmd: git clone git://github.com/autodesk-adn/Maya-devkit.git
+    - cmd: rm -rf Maya-devkit/win/include/tbb
+    - cmd: rm -rf Maya-devkit/win/include/python2.7
+    - cmd: mkdir Maya-devkit\win\lib
+    - cmd: lib /def:defs/Foundation.def /out:Maya-devkit/win/lib/Foundation.lib /machine:x64
+    - cmd: lib /def:defs/OpenMaya.def /out:Maya-devkit/win/lib/OpenMaya.lib /machine:x64
+    - cmd: lib /def:defs/OpenMayaAnim.def /out:Maya-devkit/win/lib/OpenMayaAnim.lib /machine:x64
+    - cmd: lib /def:defs/OpenMayaFX.def /out:Maya-devkit/win/lib/OpenMayaFX.lib /machine:x64
+    - cmd: lib /def:defs/OpenMayaRender.def /out:Maya-devkit/win/lib/OpenMayaRender.lib /machine:x64
+    - cmd: lib /def:defs/OpenMayaUI.def /out:Maya-devkit/win/lib/OpenMayaUI.lib /machine:x64
+
+build_script:
+    - cmd: make BOOST_LINK=shared PYTHON_BIN=C:/projects/saturn/python/python.exe MAYA_ROOT=C:/projects/saturn/Maya-devkit/win -j4
+
+artifacts:
+    - path: usd*.tar.xz
+      name: Package
+
+deploy:
+    - provider: Environment
+      name: GitHub Release
