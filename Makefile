@@ -70,7 +70,7 @@ $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,png,2b667e4,git://git.code.sf.net/p/libpng/code))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
-$(eval $(call GIT_DOWNLOAD,usd,v0.8.0,git://github.com/PixarAnimationStudios/USD))
+$(eval $(call GIT_DOWNLOAD,usd,v0.8.1,git://github.com/PixarAnimationStudios/USD))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
 # Number or processors
@@ -110,15 +110,16 @@ COMMON_CMAKE_FLAGS :=\
 
 all: usd
 
-ifeq "$(BOOST_LINK)" "shared"
-PYTHON_BIN := "C:\Program Files\Autodesk\Maya2016\bin\mayapy.exe"
-else
+# ifeq "$(BOOST_LINK)" "shared"
+# PYTHON_BIN := C:/Program\ Files/Autodesk/Maya2016/bin/mayapy.exe
+# else
 PYTHON_BIN := C:/Python27/python.exe
-endif
+# endif
 PYTHON_VERSION_SHORT := 2.7
-PYTHON_ROOT := $(dir $(PYTHON_BIN))
-PYTHON_INCLUDE := $(PYTHON_ROOT)/include
-PYTHON_LIBS := $(PYTHON_ROOT)/libs
+PYTHON_ROOT := $(subst \,,$(dir $(PYTHON_BIN)))
+PYTHON_BIN := $(subst \,,$(PYTHON_BIN))
+PYTHON_INCLUDE := $(PYTHON_ROOT)include
+PYTHON_LIBS := $(PYTHON_ROOT)libs
 
 ifeq "$(BOOST_VERSION)" "1_55_0"
 BOOST_USERCONFIG := tools/build/v2/user-config.jam
@@ -133,6 +134,7 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	cd boost_$(boost_VERSION) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	echo 'using msvc : 14.1 : "$(CXX)" ;' > $(BOOST_USERCONFIG) && \
+	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' && \
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' >> $(BOOST_USERCONFIG) && \
 	( printf '/handle-static-runtime/\n/EXIT/d\nw\nq' | ed -s Jamroot ) && \
 	cmd /C bootstrap.bat msvc > $(ABSOLUTE_PREFIX_ROOT)/log_boost.txt 2>&1 && \
@@ -457,13 +459,15 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 	( printf '/pragma once/a\n#ifndef OIIO_STATIC_BUILD\n#define OIIO_STATIC_BUILD\n#endif\n.\nw\nq\n' | ed -s src/include/OpenImageIO/export.h ) && \
 	( printf '/libturbojpeg/s/libturbojpeg/turbojpeg-static/\nw\nq' | ed -s src/cmake/modules/FindJPEGTurbo.cmake ) && \
 	( printf '/\/W1/s/W1/bigobj/\nw\nq' | ed -s src/cmake/compiler.cmake ) && \
+	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s src/cmake/compiler.cmake ) && \
+	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s src/cmake/compiler.cmake ) && \
+	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s src/cmake/externalpackages.cmake ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBOOST_ROOT="$(WINDOWS_PREFIX_ROOT)/boost" \
 		-DBUILDSTATIC:BOOL=ON \
-		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/oiio" \
 		-DFREETYPE_INCLUDE_PATH="$(WINDOWS_PREFIX_ROOT)/freetype/include/freetype2" \
@@ -702,20 +706,26 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(glut_VERSION
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(usd_FILE))" $(notdir $(basename $(usd_FILE))) && \
 	cd $(notdir $(basename $(usd_FILE))) && \
 	git checkout -q $(usd_VERSION) && \
+	echo Patching for supporting static OIIO... && \
 	( for f in $(OIIO_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
 	( printf "/find_library.*OPENEXR_.*_LIBRARY/a\nNAMES\n\044{OPENEXR_LIB}-2_2\n.\nw\nq" | ed -s cmake/modules/FindOpenEXR.cmake ) && \
 	( printf "/HDF5 REQUIRED/+\nd\nd\nd\nw\nq" | ed -s cmake/defaults/Packages.cmake ) && \
 	( printf "/BOOST_ALL_DYN_LINK/d\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
 	( printf "/OPENEXR_DLL/d\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
-	( printf "/Program Files.*Maya2017/d\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
-	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/lib/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
+	echo Patching for supporting MSVC2017... && \
 	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/modules/FindGLEW.cmake ) && \
 	( printf "/Zc:rvalueCast/d\nd\nd\na\nset(_PXR_CXX_FLAGS \"\044{_PXR_CXX_FLAGS} /Zc:rvalueCast /Zc:strictStrings /Zc:inline\")\n.\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
-	echo Dont skip plugins when building static libraries... && \
-	( printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
-	( printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
-	echo Catmull-Clark is default subdivision scheme for all the alembics. It's temporary, while Hydra doesn't consider normals... && \
+	echo Patching for Maya 2016 support... && \
+	( printf "/Program Files.*Maya2017/d\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
+	echo Cant irnore Unresolved_external_symbol_error_is_expected_Please_ignore because it always fails... && \
+	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/lib/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || echo Dont skip plugins when building static libraries... ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	echo Set Catmull-Clark as default subdivision scheme for all the alembics. It's temporary, while Hydra doesn't consider normals... && \
 	( printf "/UsdGeomTokens->subdivisionScheme/+2\ns/none/catmullClark/\nw\nq" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
+	echo Skip extra stuff because it fails... && \
+	( printf "/add_subdirectory(extras)/d\nw\n" | ed -s CMakeLists.txt ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
