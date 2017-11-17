@@ -11,6 +11,9 @@ install:
     # Python
     - cmd: curl https://www.python.org/ftp/python/2.7.13/python-2.7.13.amd64.msi -o python.msi
     - cmd: msiexec /a python.msi /qb TARGETDIR=C:\projects\saturn\python
+    - cmd: curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    - cmd: python\python.exe get-pip.py
+    - cmd: python\python.exe -m pip install PySide PyOpenGL Jinja2
 
     # GNU ed
     - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/ed/ed-1.14.1-1.tar.xz -o ed.tar.xz
@@ -58,3 +61,32 @@ artifacts:
 deploy:
     - provider: Environment
       name: GitHub Release
+
+cache:
+    - lib\boost
+    - lib\built_boost
+    - lib\built_cmake
+    - lib\built_freetype
+    - lib\built_ilmbase
+    - lib\built_jpeg
+    - lib\built_openexr
+    - lib\built_png
+    - lib\built_tiff
+    - lib\built_zlib
+    - lib\cmake
+    - lib\freetype
+    - lib\ilmbase
+    - lib\jpeg
+    - lib\openexr
+    - lib\png
+    - lib\tiff
+    - lib\zlib
+    - src\boost_1_61_0.tar.gz
+    - src\cmake-3.9.1-win64-x64.zip
+    - src\code
+    - src\freetype-2.8.tar.gz
+    - src\ilmbase-2.2.0.tar.gz
+    - src\libjpeg-turbo.git
+    - src\openexr-2.2.0.tar.gz
+    - src\tiff-3.8.2.tar.gz
+    - src\zlib.git
