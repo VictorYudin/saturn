@@ -161,8 +161,6 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 		$(MAKE_MODE) \
 		stage \
 		install >> $(ABSOLUTE_PREFIX_ROOT)/log_boost.txt 2>&1 && \
-	cd .. && \
-	rm -rf boost_$(boost_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(BOOST_VERSION) > $@
 
@@ -199,8 +197,6 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(hdf5_VER
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_alembic.txt 2>&1 && \
-	cd .. && \
-	rm -rf alembic && \
 	cd $(THIS_DIR) && \
 	echo $(alembic_VERSION) > $@
 
@@ -233,8 +229,6 @@ $(freetype_VERSION_FILE) : $(cmake_VERSION_FILE) $(freetype_FILE)
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_freetype.txt 2>&1 && \
-	cd ../.. && \
-	rm -rf $(notdir $(basename $(basename $(freetype_FILE)))) && \
 	cd $(THIS_DIR) && \
 	echo $(freetype_VERSION) > $@
 
@@ -268,8 +262,6 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_embree.txt 2>&1 && \
-	cd .. && \
-	rm -rf embree && \
 	cd $(THIS_DIR) && \
 	echo $(embree_VERSION) > $@
 
@@ -298,8 +290,6 @@ $(glew_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_FILE)
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glew.txt 2>&1 && \
-	cd ../.. && \
-	rm -rf $(notdir $(basename $(glew_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(glew_VERSION) > $@
 
@@ -323,8 +313,6 @@ $(glfw_VERSION_FILE) : $(cmake_VERSION_FILE) $(glfw_FILE)/HEAD
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glfw.txt 2>&1 && \
-	cd .. && \
-	rm -rf $(notdir $(basename $(glfw_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(glfw_VERSION) > $@
 
@@ -347,8 +335,6 @@ $(glut_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_FILE)
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glut.txt 2>&1 && \
-	cd .. && \
-	rm -rf $(notdir $(basename $(basename $(glut_FILE)))) && \
 	cd $(THIS_DIR) && \
 	echo $(glut_VERSION) > $@
 
@@ -379,8 +365,6 @@ $(hdf5_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(hdf5_FILE)
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_hdf5.txt 2>&1 && \
-	cd ../.. && \
-	rm -rf hdf5-$(hdf5_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(hdf5_VERSION) > $@
 
@@ -404,8 +388,6 @@ $(jom_VERSION_FILE) : $(cmake_VERSION_FILE) $(qt5base_VERSION_FILE) $(jom_FILE)/
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_jom.txt 2>&1 && \
-	cd .. && \
-	rm -rf $(notdir $(basename $(jom_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(jom_VERSION) > $@
 
@@ -429,8 +411,6 @@ $(jpeg_VERSION_FILE) : $(cmake_VERSION_FILE) $(jpeg_FILE)/HEAD
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_jpeg.txt 2>&1 && \
-	cd .. && \
-	rm -rf jpeg && \
 	cd $(THIS_DIR) && \
 	echo $(jpeg_VERSION) > $@
 
@@ -453,8 +433,6 @@ $(jsoncpp_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(jsoncpp_F
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_jsoncpp.txt 2>&1 && \
-	cd .. && \
-	rm -rf jsoncpp && \
 	cd $(THIS_DIR) && \
 	echo $(jsoncpp_VERSION) > $@
 
@@ -475,8 +453,6 @@ $(ilmbase_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_FILE)
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_ilmbase.txt 2>&1 && \
-	cd .. && \
-	rm -rf ilmbase-$(ilmbase_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(ilmbase_VERSION) > $@
 
@@ -529,8 +505,6 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
-	cd ../.. && \
-	rm -rf oiio && \
 	cd $(THIS_DIR) && \
 	echo $(oiio_VERSION) > $@
 
@@ -554,8 +528,6 @@ $(openexr_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(zlib_V
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_openexr.txt 2>&1 && \
-	cd .. && \
-	rm -rf openexr-$(openexr_VERSION) && \
 	cp $(ABSOLUTE_PREFIX_ROOT)/ilmbase/lib/*.lib $(ABSOLUTE_PREFIX_ROOT)/openexr/lib && \
 	cd $(THIS_DIR) && \
 	echo $(openexr_VERSION) > $@
@@ -594,8 +566,6 @@ $(opensubd_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_VERSION_FILE) $(glfw_VER
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_opensubdiv.txt 2>&1 && \
-	cd .. && \
-	rm -rf $(notdir $(basename $(opensubd_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(opensubd_VERSION) > $@
 
@@ -617,8 +587,6 @@ $(perl_VERSION_FILE) : $(perl_FILE)
 		CCTYPE=MSVC141 \
 		INST_TOP="$(subst /,\,$(WINDOWS_PREFIX_ROOT))\perl" \
 		install >> $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
-	cd ../.. && \
-	rm -rf $(notdir $(basename $(perl_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(perl_VERSION) > $@
 
@@ -641,8 +609,6 @@ $(png_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(png_FILE)/HEA
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_png.txt 2>&1 && \
-	cd .. && \
-	rm -rf png && \
 	cd $(THIS_DIR) && \
 	echo $(png_VERSION) > $@
 
@@ -666,9 +632,7 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
-	cd .. && \
 	rm $(ABSOLUTE_PREFIX_ROOT)/ptex/lib/*.dll && \
-	rm -rf $(notdir $(basename $(ptex_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(ptex_VERSION) > $@
 
@@ -707,8 +671,6 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 		-mp > $(ABSOLUTE_PREFIX_ROOT)/log_gt5base.txt 2>&1 && \
 	env -u MAKE -u MAKEFLAGS nmake >> $(ABSOLUTE_PREFIX_ROOT)/log_gt5base.txt 2>&1 && \
 	env -u MAKE -u MAKEFLAGS nmake install >> $(ABSOLUTE_PREFIX_ROOT)/log_gt5base.txt 2>&1 && \
-	cd .. && \
-	echo rm -rf $(notdir $(basename $(qt5base_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(qt5base_VERSION) > $@
 
@@ -733,8 +695,6 @@ $(tbb_VERSION_FILE) : $(tbb_FILE)
 		build/vs2012/x64/tbbmalloc_proxy/$(CMAKE_BUILD_TYPE)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
 	cp *.lib $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
-	cd .. && \
-	rm -rf tbb$(tbb_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(tbb_VERSION) > $@
 
@@ -761,8 +721,6 @@ $(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(
 	cp libtiff/libtiff.pdb $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
 	cp libtiff/libtiff.ilk $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
 	cp libtiff/*.h* $(ABSOLUTE_PREFIX_ROOT)/tiff/include && \
-	cd .. && \
-	rm -rf tiff-$(tiff_VERSION) && \
 	cd $(THIS_DIR) && \
 	echo $(openexr_VERSION) > $@
 
@@ -864,8 +822,6 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(glut_VERSION
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
 	( test ! $(USE_STATIC_BOOST) == OFF || echo Including boost shared libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || cp $(ABSOLUTE_PREFIX_ROOT)/boost/lib/*.dll $(ABSOLUTE_PREFIX_ROOT)/usd/lib ) && \
-	cd ../.. && \
-	rm -rf $(notdir $(basename $(usd_FILE))) && \
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 
