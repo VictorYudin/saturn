@@ -25,42 +25,40 @@ THIS_DIR := $(shell pwd)
 TOP_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 WINDOWS_THIS_DIR := $(shell cygpath -w $(THIS_DIR))
 
-define GIT_DOWNLOAD =
+define PACKAGE_VARS =
+ifeq "$($(1)_EXTERNAL)" ""
 $(1)_VERSION := $(2)
 $(1)_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_$(1)
 $(1)_PREFIX := $(WINDOWS_PREFIX_ROOT)/$(1)
 $(1)_SOURCE := $(3)
 $(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
 $(1): $$($(1)_VERSION_FILE)
+
+$(1)-archive: $(1)-$$($(1)_VERSION).tar.xz
+$(1)-$$($(1)_VERSION).tar.xz: $$($(1)_VERSION_FILE)
+	@echo Archiving $$@ && \
+	tar cfJ $$@ -C $(ABSOLUTE_PREFIX_ROOT) $(1)
+else
+$(1)_PREFIX := $(1)_EXTERNAL
+endif
+endef
+
+define GIT_DOWNLOAD =
+$(call PACKAGE_VARS,$(1),$(2),$(3))
 
 $$($(1)_FILE)/HEAD :
 	@mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
 	echo Downloading $$($(1)_FILE)... && \
 	git clone -q --bare $$($(1)_SOURCE) `cygpath -w $$($(1)_FILE)`
-
-$(1)-archive: $(1)-$$($(1)_VERSION).tar.xz
-$(1)-$$($(1)_VERSION).tar.xz: $$($(1)_VERSION_FILE)
-	@echo Archiving $$@ && \
-	tar cfJ $$@ -C $(ABSOLUTE_PREFIX_ROOT) $(1)
 endef
 
 define CURL_DOWNLOAD =
-$(1)_VERSION := $(2)
-$(1)_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_$(1)
-$(1)_PREFIX := $(WINDOWS_PREFIX_ROOT)/$(1)
-$(1)_SOURCE := $(3)
-$(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
-$(1): $$($(1)_VERSION_FILE)
+$(call PACKAGE_VARS,$(1),$(2),$(3))
 
 $$($(1)_FILE) :
 	@mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
 	echo Downloading $$($(1)_FILE)... && \
 	curl --tlsv1.2 --retry 10 -s -o $$@ -L $$($(1)_SOURCE)
-
-$(1)-archive: $(1)-$$($(1)_VERSION).tar.xz
-$(1)-$$($(1)_VERSION).tar.xz: $$($(1)_VERSION_FILE)
-	@echo Archiving $$@ && \
-	tar cfJ $$@ -C $(ABSOLUTE_PREFIX_ROOT) $(1)
 endef
 
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
