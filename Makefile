@@ -39,7 +39,7 @@ $(1)-$$($(1)_VERSION).tar.xz: $$($(1)_VERSION_FILE)
 	@echo Archiving $$@ && \
 	tar cfJ $$@ -C $(ABSOLUTE_PREFIX_ROOT) $(1)
 else
-$(1)_PREFIX := $(1)_EXTERNAL
+$(1)_PREFIX := $($(1)_EXTERNAL)
 endif
 endef
 
@@ -727,9 +727,9 @@ $(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(
 DYNAMIC_EXT := .lib
 BOOST_NAMESPACE := boost
 ifeq "$(BOOST_LINK)" "shared"
-BOOST_PREFIX :=
+BOOST_LIB_PREFIX :=
 else
-BOOST_PREFIX := lib
+BOOST_LIB_PREFIX := lib
 endif
 OIIO_LIBS = \
 	"$(subst \,/,$(png_PREFIX))/lib/libpng16_static.lib" \
@@ -741,14 +741,14 @@ OIIO_LIBS = \
 	"$(subst \,/,$(openexr_PREFIX))/lib/Half.lib" \
 	"$(subst \,/,$(openexr_PREFIX))/lib/IlmThread-2_2.lib" \
 	"$(subst \,/,$(ptex_PREFIX))/lib/Ptex.lib" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
 	"$(subst \,/,$(zlib_PREFIX))/lib/z.lib"
 
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
@@ -817,7 +817,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERS
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
 	( test ! $(USE_STATIC_BOOST) == OFF || echo Including boost shared libraries... ) && \
-	( test ! $(USE_STATIC_BOOST) == OFF || cp $(ABSOLUTE_PREFIX_ROOT)/boost/lib/*.dll $(ABSOLUTE_PREFIX_ROOT)/usd/lib ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || copy $(subst /,\,$(boost_PREFIX))\lib\*.dll $(subst /,\,$(usd_PREFIX))\lib ) && \
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 

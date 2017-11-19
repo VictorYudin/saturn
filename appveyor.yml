@@ -33,6 +33,10 @@ install:
     - cmd: curl --tlsv1.2 -o jom.tar.xz -L https://github.com/VictorYudin/saturn-jom/releases/download/1.0.5/jom-v1.1.2.tar.xz
     - cmd: tar -xf jom.tar.xz
 
+    # boost
+    - cmd: curl --tlsv1.2 -o boost.tar.xz -L https://github.com/VictorYudin/saturn-boost/releases/download/1.0.5/boost-1_61_0.tar.xz
+    - cmd: tar -xf boost.tar.xz
+
     # Put them to PATH
     - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.13.01;C:\projects\saturn\jom\bin
 
@@ -52,7 +56,7 @@ install:
     - cmd: lib /def:defs/OpenMayaUI.def /out:Maya-devkit/win/lib/OpenMayaUI.lib /machine:x64
 
 build_script:
-    - cmd: make BOOST_LINK=shared PYTHON_BIN=C:/projects/saturn/python/python.exe MAYA_ROOT=C:/projects/saturn/Maya-devkit/win -j4
+    - cmd: make BOOST_LINK=shared boost_EXTERNAL=C:/projects/saturn/boost PYTHON_BIN=C:/projects/saturn/python/python.exe MAYA_ROOT=C:/projects/saturn/Maya-devkit/win -j4
 
 artifacts:
     - path: usd*.tar.xz
@@ -62,31 +66,4 @@ deploy:
     - provider: Environment
       name: GitHub Release
 
-cache:
-    - lib\boost
-    - lib\built_boost
-    - lib\built_cmake
-    - lib\built_freetype
-    - lib\built_ilmbase
-    - lib\built_jpeg
-    - lib\built_openexr
-    - lib\built_png
-    - lib\built_tiff
-    - lib\built_zlib
-    - lib\cmake
-    - lib\freetype
-    - lib\ilmbase
-    - lib\jpeg
-    - lib\openexr
-    - lib\png
-    - lib\tiff
-    - lib\zlib
-    - src\boost_1_61_0.tar.gz
-    - src\cmake-3.9.1-win64-x64.zip
-    - src\code
-    - src\freetype-2.8.tar.gz
-    - src\ilmbase-2.2.0.tar.gz
-    - src\libjpeg-turbo.git
-    - src\openexr-2.2.0.tar.gz
-    - src\tiff-3.8.2.tar.gz
-    - src\zlib.git
+test: off
