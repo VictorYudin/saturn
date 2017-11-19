@@ -28,6 +28,7 @@ WINDOWS_THIS_DIR := $(shell cygpath -w $(THIS_DIR))
 define GIT_DOWNLOAD =
 $(1)_VERSION := $(2)
 $(1)_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_$(1)
+$(1)_PREFIX := $(WINDOWS_PREFIX_ROOT)/$(1)
 $(1)_SOURCE := $(3)
 $(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
 $(1): $$($(1)_VERSION_FILE)
@@ -46,6 +47,7 @@ endef
 define CURL_DOWNLOAD =
 $(1)_VERSION := $(2)
 $(1)_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_$(1)
+$(1)_PREFIX := $(WINDOWS_PREFIX_ROOT)/$(1)
 $(1)_SOURCE := $(3)
 $(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
 $(1): $$($(1)_VERSION_FILE)
@@ -151,7 +153,7 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	cmd /C bootstrap.bat msvc > $(ABSOLUTE_PREFIX_ROOT)/log_boost.txt 2>&1 && \
 	./b2 \
 		--layout=system \
-		--prefix=`cygpath -w $(ABSOLUTE_PREFIX_ROOT)/boost` \
+		--prefix=$(boost_PREFIX) \
 		-j $(JOB_COUNT) \
 		link=$(BOOST_LINK) \
 		threading=multi \
@@ -176,22 +178,22 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(hdf5_VER
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DHDF5_ROOT="$(WINDOWS_PREFIX_ROOT)/hdf5" \
+		-DHDF5_ROOT="$(hdf5_PREFIX)" \
 		-DALEMBIC_ILMBASE_LINK_STATIC:BOOL=ON \
 		-DALEMBIC_LIB_USES_BOOST:BOOL=ON \
 		-DALEMBIC_SHARED_LIBS:BOOL=OFF \
-		-DBOOST_ROOT:STRING="$(WINDOWS_PREFIX_ROOT)/boost" \
+		-DBOOST_ROOT:STRING="$(boost_PREFIX)" \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/alembic" \
-		-DILMBASE_ROOT="$(WINDOWS_PREFIX_ROOT)/ilmbase" \
+		-DCMAKE_INSTALL_PREFIX="$(alembic_PREFIX)" \
+		-DILMBASE_ROOT="$(ilmbase_PREFIX)" \
 		-DUSE_BOOSTREGEX:BOOL=ON \
 		-DUSE_HDF5:BOOL=ON \
 		-DUSE_MAYA:BOOL=OFF \
 		-DUSE_STATIC_BOOST:BOOL=$(USE_STATIC_BOOST) \
 		-DUSE_STATIC_HDF5:BOOL=ON \
 		-DUSE_TESTS:BOOL=OFF \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_alembic.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -223,7 +225,7 @@ $(freetype_VERSION_FILE) : $(cmake_VERSION_FILE) $(freetype_FILE)
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/freetype" \
+		-DCMAKE_INSTALL_PREFIX="$(freetype_PREFIX)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_freetype.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -240,23 +242,23 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(embree_FILE))" embree && \
 	cd embree && \
 	git checkout -q $(embree_VERSION) && \
-	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_INCLUDE_DIR $(WINDOWS_PREFIX_ROOT)/tbb/include)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
-	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY $(WINDOWS_PREFIX_ROOT)/tbb/lib/tbb.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
-	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY_MALLOC $(WINDOWS_PREFIX_ROOT)/tbb/lib/tbbmalloc.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_INCLUDE_DIR $(tbb_PREFIX)/include)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY $(tbb_PREFIX)/lib/tbb.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY_MALLOC $(tbb_PREFIX)/lib/tbbmalloc.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
 	( printf '/INSTALL(PROGRAMS/d\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
 	( printf '/INSTALL(PROGRAMS/d\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/embree" \
+		-DCMAKE_INSTALL_PREFIX="$(embree_PREFIX)" \
 		-DEMBREE_ISPC_SUPPORT:BOOL=OFF \
 		-DEMBREE_STATIC_LIB:BOOL=OFF \
 		-DEMBREE_STATIC_LIB:BOOL=ON \
-		-DGLUT_INCLUDE_DIR:PATH="$(WINDOWS_PREFIX_ROOT)/glut/include" \
-		-DGLUT_glut_LIBRARY:PATH="$(WINDOWS_PREFIX_ROOT)/glut/lib/freeglut_static.lib" \
-		-DTBB_INCLUDE_DIR="$(WINDOWS_PREFIX_ROOT)/tbb/include" \
-		-DTBB_LIBRARY="$(WINDOWS_PREFIX_ROOT)/tbb/lib/tbb.lib" \
-		-DTBB_LIBRARY_MALLOC="$(WINDOWS_PREFIX_ROOT)/tbb/lib/tbbmalloc.lib" \
+		-DGLUT_INCLUDE_DIR:PATH="$(glut_PREFIX)/include" \
+		-DGLUT_glut_LIBRARY:PATH="$(glut_PREFIX)/lib/freeglut_static.lib" \
+		-DTBB_INCLUDE_DIR="$(tbb_PREFIX)/include" \
+		-DTBB_LIBRARY="$(tbb_PREFIX)/lib/tbb.lib" \
+		-DTBB_LIBRARY_MALLOC="$(tbb_PREFIX)/lib/tbbmalloc.lib" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_embree.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -284,7 +286,7 @@ $(glew_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_FILE)
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-G "NMake Makefiles" \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/glew" \
+		-DCMAKE_INSTALL_PREFIX="$(glew_PREFIX)" \
 		./cmake > $(ABSOLUTE_PREFIX_ROOT)/log_glew.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -306,8 +308,8 @@ $(glfw_VERSION_FILE) : $(cmake_VERSION_FILE) $(glfw_FILE)/HEAD
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DGLFW_BUILD_DOCS:BOOL=OFF \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/glfw" \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DCMAKE_INSTALL_PREFIX="$(glfw_PREFIX)" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_glfw.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -326,7 +328,7 @@ $(glut_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_FILE)
 	cd $(notdir $(basename $(basename $(glut_FILE)))) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/glut" \
+		-DCMAKE_INSTALL_PREFIX="$(glut_PREFIX)" \
 		-DFREEGLUT_BUILD_DEMOS:BOOL=OFF \
 		-DFREEGLUT_BUILD_SHARED_LIBS:BOOL=OFF \
 		-DINSTALL_PDB:BOOL=ON \
@@ -357,8 +359,8 @@ $(hdf5_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(hdf5_FILE)
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/hdf5" \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DCMAKE_INSTALL_PREFIX="$(hdf5_PREFIX)" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		-DZLIB_USE_EXTERNAL:BOOL=ON \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_hdf5.txt 2>&1 && \
 	$(CMAKE) \
@@ -376,13 +378,13 @@ $(jom_VERSION_FILE) : $(cmake_VERSION_FILE) $(qt5base_VERSION_FILE) $(jom_FILE)/
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(jom_FILE))" $(notdir $(basename $(jom_FILE))) && \
 	cd $(notdir $(basename $(jom_FILE))) && \
 	git checkout -q $(jom_VERSION) && \
-	( printf "/target_link_libraries/s/)/ Winmm Mincore $(subst /,\/,$(WINDOWS_PREFIX_ROOT))\/qt5base\/lib\/qtpcre2.lib)/\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/target_link_libraries/s/)/ Winmm Mincore $(subst /,\/,$(qt5base_PREFIX))\/lib\/qtpcre2.lib)/\nw\n" | ed -s CMakeLists.txt ) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-G "NMake Makefiles" \
-		-DQt5Core_DIR:PATH="$(WINDOWS_PREFIX_ROOT)/qt5base/lib/cmake/Qt5Core" \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/jom" \
+		-DQt5Core_DIR:PATH="$(qt5base_PREFIX)/lib/cmake/Qt5Core" \
+		-DCMAKE_INSTALL_PREFIX="$(jom_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_jom.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -405,7 +407,7 @@ $(jpeg_VERSION_FILE) : $(cmake_VERSION_FILE) $(jpeg_FILE)/HEAD
 		-G "NMake Makefiles" \
 		-DENABLE_SHARED:BOOL=OFF \
 		-DENABLE_STATIC:BOOL=ON \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/jpeg" \
+		-DCMAKE_INSTALL_PREFIX="$(jpeg_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_jpeg.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -426,8 +428,8 @@ $(jsoncpp_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(jsoncpp_F
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/jsoncpp" \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DCMAKE_INSTALL_PREFIX="$(jsoncpp_PREFIX)" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_jsoncpp.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -446,7 +448,7 @@ $(ilmbase_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_FILE)
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/ilmbase" \
+		-DCMAKE_INSTALL_PREFIX="$(ilmbase_PREFIX)" \
 		-DNAMESPACE_VERSIONING:BOOL=ON \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_ilmbase.txt 2>&1 && \
 	$(CMAKE) \
@@ -479,27 +481,27 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DBOOST_ROOT="$(WINDOWS_PREFIX_ROOT)/boost" \
+		-DBOOST_ROOT="$(boost_PREFIX)" \
 		-DBUILDSTATIC:BOOL=ON \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/oiio" \
-		-DFREETYPE_INCLUDE_PATH="$(WINDOWS_PREFIX_ROOT)/freetype/include/freetype2" \
-		-DFREETYPE_PATH="$(WINDOWS_PREFIX_ROOT)/freetype" \
-		-DILMBASE_HOME="$(WINDOWS_PREFIX_ROOT)/ilmbase" \
-		-DJPEGTURBO_PATH="$(WINDOWS_PREFIX_ROOT)/jpeg" \
+		-DCMAKE_INSTALL_PREFIX="$(oiio_PREFIX)" \
+		-DFREETYPE_INCLUDE_PATH="$(freetype_PREFIX)/include/freetype2" \
+		-DFREETYPE_PATH="$(freetype_PREFIX)" \
+		-DILMBASE_HOME="$(ilmbase_PREFIX)" \
+		-DJPEGTURBO_PATH="$(jpeg_PREFIX)" \
 		-DLINKSTATIC:BOOL=ON \
 		-DOIIO_BUILD_TESTS:BOOL=OFF \
-		-DOPENEXR_HOME="$(WINDOWS_PREFIX_ROOT)/openexr" \
-		-DPNG_LIBRARY="$(WINDOWS_PREFIX_ROOT)/png/lib/libpng16_static.lib" \
-		-DPNG_PNG_INCLUDE_DIR="$(WINDOWS_PREFIX_ROOT)/png/include" \
-		-DTIFF_INCLUDE_DIR="$(WINDOWS_PREFIX_ROOT)/tiff/include" \
-		-DTIFF_LIBRARY="$(WINDOWS_PREFIX_ROOT)/tiff/lib/libtiff.lib" \
+		-DOPENEXR_HOME="$(openexr_PREFIX)" \
+		-DPNG_LIBRARY="$(png_PREFIX)/lib/libpng16_static.lib" \
+		-DPNG_PNG_INCLUDE_DIR="$(png_PREFIX)/include" \
+		-DTIFF_INCLUDE_DIR="$(tiff_PREFIX)/include" \
+		-DTIFF_LIBRARY="$(tiff_PREFIX)/lib/libtiff.lib" \
 		-DUSE_FREETYPE:BOOL=ON \
 		-DUSE_GIF:BOOL=OFF \
 		-DUSE_JPEGTURBO:BOOL=ON \
 		-DUSE_NUKE:BOOL=OFF \
 		-DVERBOSE:BOOL=ON \
-		-DZLIB_ROOT="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DZLIB_ROOT="$(zlib_PREFIX)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -519,10 +521,10 @@ $(openexr_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(zlib_V
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/openexr" \
-		-DILMBASE_PACKAGE_PREFIX:PATH="$(WINDOWS_PREFIX_ROOT)/ilmbase" \
+		-DCMAKE_INSTALL_PREFIX="$(openexr_PREFIX)" \
+		-DILMBASE_PACKAGE_PREFIX:PATH="$(ilmbase_PREFIX)" \
 		-DNAMESPACE_VERSIONING:BOOL=ON \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_openexr.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -549,17 +551,17 @@ $(opensubd_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_VERSION_FILE) $(glfw_VER
 	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/FindGLEW.cmake ) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/opensubdiv" \
-		-DGLFW_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/glfw" \
-		-DGLEW_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/glew" \
+		-DCMAKE_INSTALL_PREFIX="$(opensubd_PREFIX)" \
+		-DGLFW_LOCATION:PATH="$(glfw_PREFIX)" \
+		-DGLEW_LOCATION:PATH="$(glew_PREFIX)" \
 		-DNO_GLTESTS:BOOL=ON \
 		-DNO_TESTS:BOOL=ON \
 		-DNO_TUTORIALS:BOOL=ON \
 		-DMSVC_STATIC_CRT:BOOL=ON \
-		-DPTEX_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/ptex" \
+		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
 		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
-		-DTBB_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/tbb" \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DTBB_LOCATION:PATH="$(tbb_PREFIX)" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		-DNO_OMP=1 \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_opensubdiv.txt 2>&1 && \
 	$(CMAKE) \
@@ -585,7 +587,7 @@ $(perl_VERSION_FILE) : $(perl_FILE)
 		../perlio.i >> $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
 	env -u MAKE -u MAKEFLAGS nmake \
 		CCTYPE=MSVC141 \
-		INST_TOP="$(subst /,\,$(WINDOWS_PREFIX_ROOT))\perl" \
+		INST_TOP="$(subst /,\,$(perl_PREFIX))" \
 		install >> $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(perl_VERSION) > $@
@@ -602,8 +604,8 @@ $(png_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(png_FILE)/HEA
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DPNG_SHARED:BOOL=OFF \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/png" \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DCMAKE_INSTALL_PREFIX="$(png_PREFIX)" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_png.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -625,8 +627,8 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	( printf "2a\n#define PTEX_STATIC\n.\nw\nq\n" | ed -s src/ptex/Ptexture.h ) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/ptex" \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DCMAKE_INSTALL_PREFIX="$(ptex_PREFIX)" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -662,7 +664,7 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 		-nomake tools \
 		-opengl desktop \
 		-opensource \
-		-prefix "$(WINDOWS_PREFIX_ROOT)/qt5base" \
+		-prefix "$(qt5base_PREFIX)" \
 		-qt-freetype \
 		-qt-libpng \
 		-qt-pcre \
@@ -708,11 +710,11 @@ $(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(
 	( printf '/OPTFLAGS/s/MD/MT/\nw\nq' | ed -s nmake.opt ) && \
 	env -u MAKE -u MAKEFLAGS nmake /f Makefile.vc \
 		JPEG_SUPPORT=1 \
-		JPEG_INCLUDE=-I"$(WINDOWS_PREFIX_ROOT)/jpeg/include" \
-		JPEG_LIB="$(WINDOWS_PREFIX_ROOT)/jpeg/lib/jpeg-static.lib $(WINDOWS_PREFIX_ROOT)/zlib/lib/z.lib" \
+		JPEG_INCLUDE=-I"$(jpeg_PREFIX)/include" \
+		JPEG_LIB="$(jpeg_PREFIX)/lib/jpeg-static.lib $(zlib_PREFIX)/lib/z.lib" \
 		ZLIB_SUPPORT=1 \
-		ZLIB_INCLUDE=-I"$(WINDOWS_PREFIX_ROOT)/zlib/include" \
-		ZLIB_LIB="$(WINDOWS_PREFIX_ROOT)/zlib/lib/z.lib" > $(ABSOLUTE_PREFIX_ROOT)/log_tiff.txt 2>&1 && \
+		ZLIB_INCLUDE=-I"$(zlib_PREFIX)/include" \
+		ZLIB_LIB="$(zlib_PREFIX)/lib/z.lib" > $(ABSOLUTE_PREFIX_ROOT)/log_tiff.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/bin && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/include && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
@@ -732,27 +734,27 @@ else
 BOOST_PREFIX := lib
 endif
 OIIO_LIBS = \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/png/lib/libpng16_static.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/tiff/lib/libtiff.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/jpeg/lib/turbojpeg-static.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/openexr/lib/IlmImf-2_2.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/openexr/lib/Imath-2_2.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/openexr/lib/Iex-2_2.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/openexr/lib/Half.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/openexr/lib/IlmThread-2_2.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/ptex/lib/Ptex.lib" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/boost/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(WINDOWS_PREFIX_ROOT))/zlib/lib/z.lib"
+	"$(subst \,/,$(png_PREFIX))/lib/libpng16_static.lib" \
+	"$(subst \,/,$(tiff_PREFIX))/lib/libtiff.lib" \
+	"$(subst \,/,$(jpeg_PREFIX))/lib/turbojpeg-static.lib" \
+	"$(subst \,/,$(openexr_PREFIX))/lib/IlmImf-2_2.lib" \
+	"$(subst \,/,$(openexr_PREFIX))/lib/Imath-2_2.lib" \
+	"$(subst \,/,$(openexr_PREFIX))/lib/Iex-2_2.lib" \
+	"$(subst \,/,$(openexr_PREFIX))/lib/Half.lib" \
+	"$(subst \,/,$(openexr_PREFIX))/lib/IlmThread-2_2.lib" \
+	"$(subst \,/,$(ptex_PREFIX))/lib/Ptex.lib" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
+	"$(subst \,/,$(zlib_PREFIX))/lib/z.lib"
 
-TBB_LIBRARY := "$(WINDOWS_PREFIX_ROOT)/tbb/lib"
-TBB_ROOT_DIR := "$(WINDOWS_PREFIX_ROOT)/tbb/include"
+TBB_LIBRARY := "$(tbb_PREFIX)/lib"
+TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
 MAYA_ROOT := "C:/Program Files/Autodesk/Maya2016"
 
 $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
@@ -787,20 +789,20 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERS
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DALEMBIC_DIR=$(WINDOWS_PREFIX_ROOT)/alembic \
-		-DBOOST_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/boost" \
+		-DALEMBIC_DIR="$(alembic_PREFIX)" \
+		-DBOOST_ROOT:PATH="$(boost_PREFIX)" \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
-		-DCMAKE_INSTALL_PREFIX="$(WINDOWS_PREFIX_ROOT)/usd" \
-		-DGLEW_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/glew" \
-		-DHDF5_ROOT=$(WINDOWS_PREFIX_ROOT)/hdf5 \
+		-DCMAKE_INSTALL_PREFIX="$(usd_PREFIX)" \
+		-DGLEW_LOCATION:PATH="$(glew_PREFIX)" \
+		-DHDF5_ROOT="$(hdf5_PREFIX)" \
 		-DMAYA_LOCATION:PATH=$(MAYA_ROOT) \
 		-DPYSIDE_BIN_DIR:PATH=$(PYTHON_ROOT)/Scripts \
-		-DOIIO_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/oiio" \
-		-DOPENEXR_BASE_DIR:PATH="$(WINDOWS_PREFIX_ROOT)/ilmbase" \
-		-DOPENEXR_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/openexr" \
-		-DOPENSUBDIV_ROOT_DIR:PATH="$(WINDOWS_PREFIX_ROOT)/opensubdiv" \
-		-DPTEX_LOCATION:PATH="$(WINDOWS_PREFIX_ROOT)/ptex" \
+		-DOIIO_LOCATION:PATH="$(oiio_PREFIX)" \
+		-DOPENEXR_BASE_DIR:PATH="$(ilmbase_PREFIX)" \
+		-DOPENEXR_LOCATION:PATH="$(openexr_PREFIX)" \
+		-DOPENSUBDIV_ROOT_DIR:PATH="$(opensubd_PREFIX)" \
+		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
 		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=OFF \
 		-DPXR_BUILD_IMAGING:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
@@ -810,7 +812,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERS
 		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
 		-DTBB_LIBRARY=$(TBB_LIBRARY) \
 		-DTBB_ROOT_DIR=$(TBB_ROOT_DIR) \
-		-DZLIB_ROOT:PATH="$(WINDOWS_PREFIX_ROOT)/zlib" \
+		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
