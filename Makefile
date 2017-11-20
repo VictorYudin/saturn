@@ -783,6 +783,9 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERS
 	( printf "/UsdGeomTokens->subdivisionScheme/+2\ns/none/catmullClark/\nw\nq" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	echo Skip extra stuff because it fails... && \
 	( printf "/add_subdirectory(extras)/d\nw\n" | ed -s CMakeLists.txt ) && \
+	echo Fixed WHOLEARCHIVE bug in Visual Studio 15.4... && \
+	( printf "/TARGET_FILE:usd_m/s/<.*>/{USD_M_TARGET}/\nw\n" | ed -s cmake/macros/Public.cmake ) && \
+	( printf "/MSVC/a\nset(USD_M_TARGET pxr\\\\\\\\usd_m.lib)\n.\nw\n" | ed -s cmake/macros/Public.cmake ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
@@ -807,6 +810,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERS
 		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=ON \
+		-DPXR_LIB_PREFIX="" \
 		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
 		-DTBB_LIBRARY=$(TBB_LIBRARY) \
 		-DTBB_ROOT_DIR=$(TBB_ROOT_DIR) \
@@ -817,7 +821,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERS
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
 	( test ! $(USE_STATIC_BOOST) == OFF || echo Including boost shared libraries... ) && \
-	( test ! $(USE_STATIC_BOOST) == OFF || copy $(subst /,\,$(boost_PREFIX))\lib\*.dll $(subst /,\,$(usd_PREFIX))\lib ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || cmd /C copy $(subst /,\\,$(boost_PREFIX)/lib/*.dll) $(subst /,\\,$(usd_PREFIX)/lib) ) && \
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 

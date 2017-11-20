@@ -1,4 +1,4 @@
-image: Previous Visual Studio 2017
+image: Visual Studio 2017
 platform: x64
 configuration: Release
 
@@ -38,7 +38,7 @@ install:
     - cmd: tar -xf boost.tar.xz
 
     # Put them to PATH
-    - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.13.01;C:\projects\saturn\jom\bin
+    - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.13.01;C:\projects\saturn\jom\bin;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0
 
     # MSVC environment
     - cmd: '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
