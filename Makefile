@@ -17,7 +17,7 @@ endif
 ifeq "$(MAKE_MODE)" "debug"
 CMAKE_BUILD_TYPE := Debug
 else
-CMAKE_BUILD_TYPE := Release
+CMAKE_BUILD_TYPE := MinSizeRel
 endif
 
 # Save the current directory
@@ -70,6 +70,7 @@ $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/re
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,perl,5.26.1,http://www.cpan.org/src/5.0/perl-$$(perl_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,png,1.6.34,https://sourceforge.net/projects/libpng/files/libpng16/$$(png_VERSION)/libpng-$$(png_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,tbb,2017_20161128oss,https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb$$(tbb_VERSION)_src.tgz))
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
@@ -80,7 +81,6 @@ $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-tur
 $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
-$(eval $(call GIT_DOWNLOAD,png,2b667e4,git://git.code.sf.net/p/libpng/code))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,v5.9.2,git://github.com/qt/qtbase.git))
 $(eval $(call GIT_DOWNLOAD,usd,v0.8.1,git://github.com/PixarAnimationStudios/USD))
@@ -116,8 +116,10 @@ COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
 	-DCMAKE_CXX_FLAGS_DEBUG="/MTd $(DEFINES)" \
 	-DCMAKE_CXX_FLAGS_RELEASE="/MT $(DEFINES)" \
+	-DCMAKE_CXX_FLAGS_MINSIZEREL="/MT $(DEFINES)" \
 	-DCMAKE_C_FLAGS_DEBUG="/MTd $(DEFINES)" \
 	-DCMAKE_C_FLAGS_RELEASE="/MT $(DEFINES)" \
+	-DCMAKE_C_FLAGS_MINSIZEREL="/MT $(DEFINES)" \
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
@@ -255,7 +257,7 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 		-DGLUT_INCLUDE_DIR:PATH="$(glut_PREFIX)/include" \
 		-DGLUT_glut_LIBRARY:PATH="$(glut_PREFIX)/lib/freeglut_static.lib" \
 		-DTBB_INCLUDE_DIR="$(tbb_PREFIX)/include" \
-		-DTBB_LIBRARY="$(tbb_PREFIX)/lib/tbb.lib" \
+		-DTBB_LIBRARY="$(tbb_PREFIX)/lib/tbb$(TBB_SUFFIX).lib" \
 		-DTBB_LIBRARY_MALLOC="$(tbb_PREFIX)/lib/tbbmalloc.lib" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_embree.txt 2>&1 && \
 	$(CMAKE) \
@@ -591,19 +593,24 @@ $(perl_VERSION_FILE) : $(perl_FILE)
 	echo $(perl_VERSION) > $@
 
 # png
-$(png_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(png_FILE)/HEAD
+$(png_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(png_FILE)
 	@echo Building png $(png_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
-	rm -rf png && \
-	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/code" png && \
-	cd png && \
-	git checkout -q $(png_VERSION) && \
+	rm -rf $(notdir $(basename $(basename $(png_FILE)))) && \
+	tar -xf $(png_FILE) && \
+	cd $(notdir $(basename $(basename $(png_FILE)))) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	( printf "/CMAKE_DEBUG_POSTFIX/d\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/CheckCSourceCompiles/d\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/ASM/s/ASM//\nw\n" | ed -s CMakeLists.txt ) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DPNG_SHARED:BOOL=OFF \
 		-DCMAKE_INSTALL_PREFIX="$(png_PREFIX)" \
+		-DPNG_HARDWARE_OPTIMIZATIONS:BOOL=OFF \
+		-DPNG_SHARED:BOOL=OFF \
+		-DPNG_TESTS:BOOL=OFF \
 		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
+		-Dld-version-script:BOOL=OFF \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_png.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -622,7 +629,8 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	cd $(notdir $(basename $(ptex_FILE))) && \
 	git checkout -q $(ptex_VERSION) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
-	( printf "2a\n#define PTEX_STATIC\n.\nw\nq\n" | ed -s src/ptex/Ptexture.h ) && \
+	( printf "2a\n#ifndef PTEX_STATIC\n#define PTEX_STATIC\n#endif\n.\nw\nq\n" | ed -s src/ptex/Ptexture.h ) && \
+	( printf "g/CMAKE_BUILD_TYPE/s/CMAKE_BUILD_TYPE/USELESS/g\nw\n" | ed -s CMakeLists.txt ) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DCMAKE_INSTALL_PREFIX="$(ptex_PREFIX)" \
@@ -675,6 +683,12 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	echo $(qt5base_VERSION) > $@
 
 # tbb
+ifeq "$(MAKE_MODE)" "debug"
+TBB_CONFIGURATION := Debug
+TBB_SUFFIX := _debug
+else
+TBB_CONFIGURATION := Release
+endif
 $(tbb_VERSION_FILE) : $(tbb_FILE)
 	@echo Building tbb $(tbb_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -682,17 +696,17 @@ $(tbb_VERSION_FILE) : $(tbb_FILE)
 	tar zxf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(tbb_FILE)) && \
 	cd tbb$(tbb_VERSION) && \
 	cmd /C msbuild build/vs2012/makefile.sln \
-		/p:configuration=$(CMAKE_BUILD_TYPE)-MT \
+		/p:configuration=$(TBB_CONFIGURATION)-MT \
 		/p:platform=x64 \
 		/p:PlatformToolset=v141 > $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
 	cp -R include/tbb $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
-	cmd /C link /lib /machine:x64 /out:tbb.lib \
-		build/vs2012/x64/tbb/$(CMAKE_BUILD_TYPE)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
-	cmd /C link /lib /machine:x64 /out:tbbmalloc.lib \
-		build/vs2012/x64/tbbmalloc/$(CMAKE_BUILD_TYPE)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
-	cmd /C link /lib /machine:x64 /out:tbbmalloc_proxy.lib \
-		build/vs2012/x64/tbbmalloc_proxy/$(CMAKE_BUILD_TYPE)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+	cmd /C link /lib /machine:x64 /out:tbb$(TBB_SUFFIX).lib \
+		build/vs2012/x64/tbb/$(TBB_CONFIGURATION)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+	cmd /C link /lib /machine:x64 /out:tbbmalloc$(TBB_SUFFIX).lib \
+		build/vs2012/x64/tbbmalloc/$(TBB_CONFIGURATION)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+	cmd /C link /lib /machine:x64 /out:tbbmalloc_proxy$(TBB_SUFFIX).lib \
+		build/vs2012/x64/tbbmalloc_proxy/$(TBB_CONFIGURATION)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
 	cp *.lib $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
 	cd $(THIS_DIR) && \
@@ -709,10 +723,10 @@ $(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(
 	env -u MAKE -u MAKEFLAGS nmake /f Makefile.vc \
 		JPEG_SUPPORT=1 \
 		JPEG_INCLUDE=-I"$(jpeg_PREFIX)/include" \
-		JPEG_LIB="$(jpeg_PREFIX)/lib/jpeg-static.lib $(zlib_PREFIX)/lib/z.lib" \
+		JPEG_LIB="$(jpeg_PREFIX)/lib/jpeg-static.lib $(zlib_PREFIX)/lib/zlib.lib" \
 		ZLIB_SUPPORT=1 \
 		ZLIB_INCLUDE=-I"$(zlib_PREFIX)/include" \
-		ZLIB_LIB="$(zlib_PREFIX)/lib/z.lib" > $(ABSOLUTE_PREFIX_ROOT)/log_tiff.txt 2>&1 && \
+		ZLIB_LIB="$(zlib_PREFIX)/lib/zlib.lib" > $(ABSOLUTE_PREFIX_ROOT)/log_tiff.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/bin && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/include && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tiff/lib && \
@@ -749,7 +763,7 @@ OIIO_LIBS = \
 	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
 	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
 	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(zlib_PREFIX))/lib/z.lib"
+	"$(subst \,/,$(zlib_PREFIX))/lib/zlib.lib"
 
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
 TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
