@@ -74,7 +74,7 @@ $(eval $(call CURL_DOWNLOAD,png,1.6.34,https://sourceforge.net/projects/libpng/f
 $(eval $(call CURL_DOWNLOAD,tbb,2017_20161128oss,https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb$$(tbb_VERSION)_src.tgz))
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
-$(eval $(call GIT_DOWNLOAD,embree,v2.17.0,git://github.com/embree/embree.git))
+$(eval $(call GIT_DOWNLOAD,embree,v2.17.1,git://github.com/embree/embree.git))
 $(eval $(call GIT_DOWNLOAD,glfw,3.2.1,git://github.com/glfw/glfw.git))
 $(eval $(call GIT_DOWNLOAD,jom,v1.1.2,git://github.com/qt-labs/jom.git))
 $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
@@ -245,15 +245,34 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_INCLUDE_DIR $(tbb_PREFIX)/include)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
 	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY $(tbb_PREFIX)/lib/tbb.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
 	( printf '/FIND_PACKAGE_HANDLE_STANDARD_ARGS/-\na\nSET(TBB_LIBRARY_MALLOC $(tbb_PREFIX)/lib/tbbmalloc.lib)\n.\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
-	( printf '/INSTALL(PROGRAMS/d\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
-	( printf '/INSTALL(PROGRAMS/d\nw\nq\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/INSTALL(PROGRAMS/d\nw\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf '/INSTALL(PROGRAMS/d\nw\n' | ed -s common/cmake/FindTBB.cmake ) && \
+	( printf 'g/WIN32/s/WIN32/0/g\nw\n' | ed -s tutorials/common/tutorial/CMakeLists.txt ) && \
+	( printf '/embree.rc/d\nw\n' | ed -s kernels/CMakeLists.txt ) && \
+	( printf '/embree.rc/d\nw\n' | ed -s kernels/CMakeLists.txt ) && \
+	( printf '/FLAGS_LOWEST/a\nmessage(victor \044{FLAGS_LOWEST})\n.\nw\n' | ed -s kernels/CMakeLists.txt ) && \
+	( printf 'set_target_properties(sys PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n' >> common/sys/CMakeLists.txt ) && \
+	( printf 'set_target_properties(algorithms PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n' >> common/algorithms/CMakeLists.txt ) && \
+	( printf 'set_target_properties(tasking PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n' >> common/tasking/CMakeLists.txt ) && \
+	( printf 'set_target_properties(image PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n' >> tutorials/common/image/CMakeLists.txt ) && \
+	( printf 'set_target_properties(scenegraph PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n' >> tutorials/common/scenegraph/CMakeLists.txt ) && \
+	( printf '/tutorial/a\nset_target_properties(tutorial PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n.\nw\n' | ed -s tutorials/common/tutorial/CMakeLists.txt ) && \
+	( printf '/tutorial_device/a\nset_target_properties(tutorial_device PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n.\nw\n' | ed -s tutorials/common/tutorial/CMakeLists.txt ) && \
+	( printf '/verify/a\nset_target_properties(verify PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n.\nw\n' | ed -s tutorials/verify/CMakeLists.txt ) && \
+	( printf '/SET_PROPERTY/a\nset_target_properties(\044{TUTORIAL_NAME} PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n.\nw\n' | ed -s common/cmake/tutorial.cmake ) && \
+	( printf '/bvh_access/a\nset_target_properties(bvh_access PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n.\nw\n' | ed -s tutorials/bvh_access/CMakeLists.txt ) && \
+	( printf '/convert/a\nset_target_properties(convert PROPERTIES COMPILE_FLAGS "\044{FLAGS_AVX2}")\n.\nw\n' | ed -s tutorials/convert/CMakeLists.txt ) && \
+	( printf '/define/a\n#define EMBREE_STATIC_LIB\n.\nw\n' | ed -s include/embree2/rtcore.h ) && \
+	rm -rf tutorials/common/freeglut && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
+		-DADDITIONAL_LIBRARIES:PATH=winmm.lib \
 		-DCMAKE_INSTALL_PREFIX="$(embree_PREFIX)" \
 		-DEMBREE_ISPC_SUPPORT:BOOL=OFF \
-		-DEMBREE_STATIC_LIB:BOOL=OFF \
 		-DEMBREE_STATIC_LIB:BOOL=ON \
+		-DEMBREE_STATIC_RUNTIME:BOOL=ON \
+		-DEMBREE_TUTORIALS:BOOL=OFF \
 		-DGLUT_INCLUDE_DIR:PATH="$(glut_PREFIX)/include" \
 		-DGLUT_glut_LIBRARY:PATH="$(glut_PREFIX)/lib/freeglut_static.lib" \
 		-DTBB_INCLUDE_DIR="$(tbb_PREFIX)/include" \
@@ -264,6 +283,7 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_embree.txt 2>&1 && \
+	( for i in embree_sse42.lib embree_avx.lib embree_avx2.lib simd.lib tasking.lib lexers.lib sys.lib math.lib; do cmd /C copy $$i $(subst /,\\,$(embree_PREFIX)/lib); done ) && \
 	cd $(THIS_DIR) && \
 	echo $(embree_VERSION) > $@
 
@@ -326,6 +346,9 @@ $(glut_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_FILE)
 	rm -rf $(notdir $(basename $(basename $(glut_FILE)))) && \
 	tar -xf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(glut_FILE)) && \
 	cd $(notdir $(basename $(basename $(glut_FILE)))) && \
+	( printf "2a\n#define FREEGLUT_STATIC\n.\nw\n" | ed -s include/GL/freeglut_std.h ) && \
+	( printf "2a\n#define FREEGLUT_LIB_PRAGMAS 0\n.\nw\n" | ed -s include/GL/freeglut_std.h ) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DCMAKE_INSTALL_PREFIX="$(glut_PREFIX)" \
@@ -746,30 +769,38 @@ else
 BOOST_LIB_PREFIX := lib
 endif
 OIIO_LIBS = \
-	"$(subst \,/,$(png_PREFIX))/lib/libpng16_static.lib" \
-	"$(subst \,/,$(tiff_PREFIX))/lib/libtiff.lib" \
-	"$(subst \,/,$(jpeg_PREFIX))/lib/turbojpeg-static.lib" \
-	"$(subst \,/,$(openexr_PREFIX))/lib/IlmImf-2_2.lib" \
-	"$(subst \,/,$(openexr_PREFIX))/lib/Imath-2_2.lib" \
-	"$(subst \,/,$(openexr_PREFIX))/lib/Iex-2_2.lib" \
-	"$(subst \,/,$(openexr_PREFIX))/lib/Half.lib" \
-	"$(subst \,/,$(openexr_PREFIX))/lib/IlmThread-2_2.lib" \
-	"$(subst \,/,$(ptex_PREFIX))/lib/Ptex.lib" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(boost_PREFIX))/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
-	"$(subst \,/,$(zlib_PREFIX))/lib/zlib.lib"
+	"$(embree_PREFIX)/lib/embree_avx.lib" \
+	"$(embree_PREFIX)/lib/embree_avx2.lib" \
+	"$(embree_PREFIX)/lib/embree_sse42.lib" \
+	"$(embree_PREFIX)/lib/lexers.lib" \
+	"$(embree_PREFIX)/lib/math.lib" \
+	"$(embree_PREFIX)/lib/simd.lib" \
+	"$(embree_PREFIX)/lib/sys.lib" \
+	"$(embree_PREFIX)/lib/tasking.lib" \
+	"$(png_PREFIX)/lib/libpng16_static.lib" \
+	"$(tiff_PREFIX)/lib/libtiff.lib" \
+	"$(jpeg_PREFIX)/lib/turbojpeg-static.lib" \
+	"$(openexr_PREFIX)/lib/IlmImf-2_2.lib" \
+	"$(openexr_PREFIX)/lib/Imath-2_2.lib" \
+	"$(openexr_PREFIX)/lib/Iex-2_2.lib" \
+	"$(openexr_PREFIX)/lib/Half.lib" \
+	"$(openexr_PREFIX)/lib/IlmThread-2_2.lib" \
+	"$(ptex_PREFIX)/lib/Ptex.lib" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
+	"$(zlib_PREFIX)/lib/zlib.lib"
 
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
 TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
 MAYA_ROOT := "C:/Program Files/Autodesk/Maya2016"
 
-$(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
+$(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
 	@echo Building usd $(usd_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(usd_FILE))) && \
@@ -809,22 +840,24 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERS
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX="$(usd_PREFIX)" \
+		-DEMBREE_LOCATION:PATH="$(embree_PREFIX)" \
 		-DGLEW_LOCATION:PATH="$(glew_PREFIX)" \
 		-DHDF5_ROOT="$(hdf5_PREFIX)" \
 		-DMAYA_LOCATION:PATH=$(MAYA_ROOT) \
-		-DPYSIDE_BIN_DIR:PATH=$(PYTHON_ROOT)/Scripts \
 		-DOIIO_LOCATION:PATH="$(oiio_PREFIX)" \
 		-DOPENEXR_BASE_DIR:PATH="$(ilmbase_PREFIX)" \
 		-DOPENEXR_LOCATION:PATH="$(openexr_PREFIX)" \
 		-DOPENSUBDIV_ROOT_DIR:PATH="$(opensubd_PREFIX)" \
 		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
 		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=OFF \
+		-DPXR_BUILD_EMBREE_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_IMAGING:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=ON \
 		-DPXR_LIB_PREFIX="" \
+		-DPYSIDE_BIN_DIR:PATH=$(PYTHON_ROOT)/Scripts \
 		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
 		-DTBB_LIBRARY=$(TBB_LIBRARY) \
 		-DTBB_ROOT_DIR=$(TBB_ROOT_DIR) \
