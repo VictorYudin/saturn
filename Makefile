@@ -66,12 +66,16 @@ $$($(1)_FILE) :
 endef
 
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,cfe,5.0.0,http://releases.llvm.org/$$(cfe_VERSION)/cfe-$$(cfe_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,clangtoolsextra,5.0.0,http://releases.llvm.org/$$(clangtoolsextra_VERSION)/clang-tools-extra-$$(clangtoolsextra_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,cmake,3.9.1,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION)-win64-x64.zip))
+$(eval $(call CURL_DOWNLOAD,compilerrt,5.0.0,http://releases.llvm.org/$$(compilerrt_VERSION)/compiler-rt-$$(compilerrt_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,freetype,2.8,http://download.savannah.gnu.org/releases/freetype/freetype-$$(freetype_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,glew,2.0.0,https://sourceforge.net/projects/glew/files/glew/$$(glew_VERSION)/glew-$$(glew_VERSION).tgz))
 $(eval $(call CURL_DOWNLOAD,glut,3.0.0,https://sourceforge.net/projects/freeglut/files/freeglut/$$(glut_VERSION)/freeglut-$$(glut_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$$(word 1,$$(subst ., ,$$(hdf5_VERSION))).$$(word 2,$$(subst ., ,$$(hdf5_VERSION)))/hdf5-$$(hdf5_VERSION)/src/hdf5-$$(hdf5_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,llvm,5.0.0,http://releases.llvm.org/$$(llvm_VERSION)/llvm-$$(llvm_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,perl,5.26.1,http://www.cpan.org/src/5.0/perl-$$(perl_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,png,1.6.34,https://sourceforge.net/projects/libpng/files/libpng16/$$(png_VERSION)/libpng-$$(png_VERSION).tar.gz))
@@ -488,6 +492,39 @@ $(ilmbase_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_FILE)
 	cd $(THIS_DIR) && \
 	echo $(ilmbase_VERSION) > $@
 
+# LLVM and clang
+$(llvm_VERSION_FILE) : $(llvm_FILE) $(cfe_FILE) $(clangtoolsextra_FILE) $(cmake_VERSION_FILE) $(compilerrt_FILE)
+	@echo Building llvm and clang $(llvm_VERS) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(basename $(llvm_FILE)))) && \
+	tar xf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(llvm_FILE)) && \
+	cd $(notdir $(basename $(basename $(llvm_FILE)))) && \
+	cd tools && \
+	tar xf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(cfe_FILE)) && \
+	mv $(notdir $(basename $(basename $(cfe_FILE)))) clang && \
+	cd clang/tools && \
+	tar xf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(clangtoolsextra_FILE)) && \
+	mv $(notdir $(basename $(basename $(clangtoolsextra_FILE)))) extra && \
+	cd ../../../projects && \
+	tar xf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(compilerrt_FILE)) && \
+	mv $(notdir $(basename $(basename $(compilerrt_FILE)))) compiler-rt && \
+	cd .. && \
+	mkdir build && cd build && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX="$(llvm_PREFIX)" \
+		-DLLVM_ENABLE_RTTI:BOOL=ON \
+		-DLLVM_REQUIRES_RTTI:BOOL=ON \
+		-DLLVM_TARGETS_TO_BUILD:STRING=X86 \
+		-DPYTHON_EXECUTABLE:STRING="$(PYTHON_BIN)" \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_llvm.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_llvm.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(llvm_VERSION) > $@
 
 # OpenImageIO
 # Edits:
