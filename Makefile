@@ -1,3 +1,7 @@
+# Copyright (C) 2017 Victor Yudin - All Rights Reserved
+#
+# This is the Windows build recipe for Pixar USD and its dependencies.
+#
 
 SOURCES_ROOT=./src
 BUILD_ROOT=./build
