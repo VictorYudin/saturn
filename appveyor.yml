@@ -67,3 +67,6 @@ deploy:
       name: GitHub Release
 
 test: off
+
+only_commits:
+    message: /build/
