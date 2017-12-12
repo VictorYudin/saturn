@@ -762,6 +762,7 @@ $(tbb_VERSION_FILE) : $(tbb_FILE)
 	rm -rf tbb$(tbb_VERSION) && \
 	tar zxf $(ABSOLUTE_SOURCES_ROOT)/$(notdir $(tbb_FILE)) && \
 	cd tbb$(tbb_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	cmd /C msbuild build/vs2012/makefile.sln \
 		/p:configuration=$(TBB_CONFIGURATION)-MT \
 		/p:platform=x64 \
