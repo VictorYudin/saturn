@@ -90,7 +90,8 @@ $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/js
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
-$(eval $(call GIT_DOWNLOAD,qt5base,v5.9.2,git://github.com/qt/qtbase.git))
+$(eval $(call GIT_DOWNLOAD,qt5base,v5.10.0,git://github.com/qt/qtbase.git))
+$(eval $(call GIT_DOWNLOAD,qt5tools,v5.10.0,git://github.com/qt/qttools.git))
 $(eval $(call GIT_DOWNLOAD,usd,v0.8.2,git://github.com/PixarAnimationStudios/USD))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 
@@ -100,6 +101,7 @@ JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
 CC := $(shell where cl)
 CXX := $(shell where cl)
 CMAKE := env -u MAKE -u MAKEFLAGS $(ABSOLUTE_PREFIX_ROOT)/cmake/bin/cmake
+NMAKE := env -u MAKE -u MAKEFLAGS jom
 
 BOOST_LINK := static
 ifeq "$(BOOST_LINK)" "shared"
@@ -646,13 +648,13 @@ $(perl_VERSION_FILE) : $(perl_FILE)
 	tar -xf $(ABSOLUTE_SOURCES_ROOT)/perl-$(perl_VERSION).tar.gz && \
 	cd perl-$(perl_VERSION)/win32 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
-	env -u MAKE -u MAKEFLAGS nmake \
+	$(NMAKE) \
 		CCTYPE=MSVC141 \
 		config.h > $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
-	env -u MAKE -u MAKEFLAGS nmake \
+	$(NMAKE) \
 		CCTYPE=MSVC141 \
 		../perlio.i >> $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
-	env -u MAKE -u MAKEFLAGS nmake \
+	$(NMAKE) \
 		CCTYPE=MSVC141 \
 		INST_TOP="$(subst /,\,$(perl_PREFIX))" \
 		install >> $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
@@ -711,6 +713,9 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	cd $(THIS_DIR) && \
 	echo $(ptex_VERSION) > $@
 
+ifeq "$(QT_PLATFORM)" "winrt"
+	QT_ADDITIONAL := -xplatform winrt-x64-msvc2017
+endif
 $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	@echo Building Qt5 Base $(qt5base_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -719,35 +724,52 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	cd $(notdir $(basename $(qt5base_FILE))) && \
 	git checkout -q $(qt5base_VERSION) && \
 	( printf "g/-MD/s/-MD/-MT/g\nw\n" | ed -s mkspecs/common/msvc-desktop.conf ) && \
+	( printf "/\/NODEFAULTLIB/s/\/NODEFAULTLIB/\/NODEFAULTLIB:libucrt.lib \/NODEFAULTLIB:libvcruntime.lib \/NODEFAULTLIB/g\nw\n" | ed -s mkspecs/winrt-x64-msvc2017/qmake.conf ) && \
+	( printf "g/-MD/s/-MD/-MT/g\nw\n" | ed -s mkspecs/common/winrt_winphone/qmake.conf ) && \
+	( printf "/libDirs.*store/a\nlibDirs << toolsInstallDir + QStringLiteral(\"lib/\") + arch;\n.\nw\n" | ed -s qmake/generators/win32/msvc_nmake.cpp ) && \
+	( printf "/#.*error/d\nd\nd\nw\n" | ed -s src/corelib/thread/qthread_win.cpp ) && \
+	( printf "/qt_windows.h/a\n#include <process.h>\n.\nw\n" | ed -s src/corelib/thread/qthread_win.cpp ) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
 	env -u MAKE -u MAKEFLAGS cmd /C configure.bat \
+		$(QT_ADDITIONAL) \
+		-angle \
 		-confirm-license \
+		-mp \
 		-no-cups \
 		-no-directwrite \
 		-no-gif \
-		-no-gui \
 		-no-libjpeg \
 		-no-openssl \
 		-no-qml-debug \
 		-no-sql-mysql \
 		-no-sql-sqlite \
-		-no-widgets \
 		-nomake examples \
 		-nomake tests \
-		-nomake tools \
-		-opengl desktop \
 		-opensource \
 		-prefix "$(qt5base_PREFIX)" \
 		-qt-freetype \
 		-qt-libpng \
 		-qt-pcre \
 		-release \
-		-static \
-		-mp > $(ABSOLUTE_PREFIX_ROOT)/log_gt5base.txt 2>&1 && \
-	env -u MAKE -u MAKEFLAGS nmake >> $(ABSOLUTE_PREFIX_ROOT)/log_gt5base.txt 2>&1 && \
-	env -u MAKE -u MAKEFLAGS nmake install >> $(ABSOLUTE_PREFIX_ROOT)/log_gt5base.txt 2>&1 && \
+		-static  > $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
+	$(NMAKE) >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
+	$(NMAKE) install >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(qt5base_VERSION) > $@
+
+$(qt5tools_VERSION_FILE) : $(qt5base_VERSION_FILE) $(qt5tools_FILE)/HEAD
+	@echo Building Qt5 Tools $(qt5tools_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(qt5tools_FILE))) && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(qt5tools_FILE))" $(notdir $(basename $(qt5tools_FILE))) && \
+	cd $(notdir $(basename $(qt5tools_FILE))) && \
+	git checkout -q $(qt5tools_VERSION) && \
+	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
+	$(ABSOLUTE_PREFIX_ROOT)/qt5base/bin/qmake qttools.pro > $(ABSOLUTE_PREFIX_ROOT)/log_qt5tools.txt 2>&1 && \
+	$(NMAKE) >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5tools.txt 2>&1 && \
+	$(NMAKE) install >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5tools.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(qt5tools_VERSION) > $@
 
 # tbb
 ifeq "$(MAKE_MODE)" "debug"
