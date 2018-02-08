@@ -65,6 +65,24 @@ $$($(1)_FILE) :
 	curl --tlsv1.2 --retry 10 -s -o $$@ -L $$($(1)_SOURCE)
 endef
 
+define QT_DOWNLOAD =
+$(call GIT_DOWNLOAD,$(1),$(2),$(3))
+
+$$($(1)_VERSION_FILE) : $$(qt5base_VERSION_FILE) $$($(1)_FILE)/HEAD
+	@echo Building Qt5 $(1) $$($(1)_VERSION) && \
+	mkdir -p $$(ABSOLUTE_BUILD_ROOT) && cd $$(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $$(notdir $$(basename $$($(1)_FILE))) && \
+	git clone -q --no-checkout "$$(WINDOWS_SOURCES_ROOT)/$$(notdir $$($(1)_FILE))" $$(notdir $$(basename $$($(1)_FILE))) && \
+	cd $$(notdir $$(basename $$($(1)_FILE))) && \
+	git checkout -q $$($(1)_VERSION) && \
+	export PATH=$$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$(PYTHON_ABSOLUTE):$$$$PATH && \
+	$$(ABSOLUTE_PREFIX_ROOT)/qt5base/bin/qmake $$(notdir $$(basename $$($(1)_FILE))).pro > $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
+	$$(NMAKE) >> $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
+	$$(NMAKE) install >> $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
+	cd $$(THIS_DIR) && \
+	echo $$($(1)_VERSION) > $$@
+endef
+
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,cfe,5.0.0,http://releases.llvm.org/$$(cfe_VERSION)/cfe-$$(cfe_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,clangtoolsextra,5.0.0,http://releases.llvm.org/$$(clangtoolsextra_VERSION)/clang-tools-extra-$$(clangtoolsextra_VERSION).src.tar.xz))
@@ -91,9 +109,11 @@ $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,v5.10.0,git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,qt5tools,v5.10.0,git://github.com/qt/qttools.git))
 $(eval $(call GIT_DOWNLOAD,usd,v0.8.2,git://github.com/PixarAnimationStudios/USD))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
+$(eval $(call QT_DOWNLOAD,qt5declarative,v5.10.0,git://github.com/qt/qtdeclarative.git))
+$(eval $(call QT_DOWNLOAD,qt5graphicaleffects,v5.10.0,git://github.com/qt/qtgraphicaleffects.git))
+$(eval $(call QT_DOWNLOAD,qt5tools,v5.10.0,git://github.com/qt/qttools.git))
 
 # Number or processors
 JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -143,6 +163,7 @@ all: usd-archive
 PYTHON_BIN := C:/Python27/python.exe
 PYTHON_VERSION_SHORT := 2.7
 PYTHON_ROOT := $(subst \,,$(dir $(PYTHON_BIN)))
+PYTHON_ABSOLUTE := $(shell cygpath -u $(PYTHON_ROOT))
 PYTHON_BIN := $(subst \,,$(PYTHON_BIN))
 PYTHON_INCLUDE := $(PYTHON_ROOT)include
 PYTHON_LIBS := $(PYTHON_ROOT)libs
@@ -714,10 +735,10 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	echo $(ptex_VERSION) > $@
 
 ifeq "$(QT_PLATFORM)" "winrt"
-	QT_ADDITIONAL := -xplatform winrt-x64-msvc2017
+QT_ADDITIONAL := -xplatform winrt-x64-msvc2017
 endif
 $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
-	@echo Building Qt5 Base $(qt5base_VERSION) && \
+	@echo Building Qt5 Base $(qt5base_VERSION) $(QT_ADDITIONAL) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(qt5base_FILE))) && \
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(qt5base_FILE))" $(notdir $(basename $(qt5base_FILE))) && \
@@ -743,7 +764,6 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 		-no-qml-debug \
 		-no-sql-mysql \
 		-no-sql-sqlite \
-		-nomake examples \
 		-nomake tests \
 		-opensource \
 		-prefix "$(qt5base_PREFIX)" \
@@ -756,20 +776,6 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	$(NMAKE) install >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(qt5base_VERSION) > $@
-
-$(qt5tools_VERSION_FILE) : $(qt5base_VERSION_FILE) $(qt5tools_FILE)/HEAD
-	@echo Building Qt5 Tools $(qt5tools_VERSION) && \
-	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
-	rm -rf $(notdir $(basename $(qt5tools_FILE))) && \
-	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(qt5tools_FILE))" $(notdir $(basename $(qt5tools_FILE))) && \
-	cd $(notdir $(basename $(qt5tools_FILE))) && \
-	git checkout -q $(qt5tools_VERSION) && \
-	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
-	$(ABSOLUTE_PREFIX_ROOT)/qt5base/bin/qmake qttools.pro > $(ABSOLUTE_PREFIX_ROOT)/log_qt5tools.txt 2>&1 && \
-	$(NMAKE) >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5tools.txt 2>&1 && \
-	$(NMAKE) install >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5tools.txt 2>&1 && \
-	cd $(THIS_DIR) && \
-	echo $(qt5tools_VERSION) > $@
 
 # tbb
 ifeq "$(MAKE_MODE)" "debug"
@@ -867,6 +873,12 @@ TBB_LIBRARY := "$(tbb_PREFIX)/lib"
 TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
 MAYA_ROOT := "C:/Program Files/Autodesk/Maya2016"
 
+ifeq "$(USD_MINIMAL)" "1"
+PXR_BUILD_IMAGING := OFF
+else
+PXR_BUILD_IMAGING := ON
+endif
+
 $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
 	@echo Building usd $(usd_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -918,11 +930,12 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
 		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=OFF \
 		-DPXR_BUILD_EMBREE_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
-		-DPXR_BUILD_IMAGING:BOOL=ON \
+		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
-		-DPXR_BUILD_USD_IMAGING:BOOL=ON \
+		-DPXR_BUILD_USD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
+		-DPXR_ENABLE_PYTHON_SUPPORT:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_LIB_PREFIX="" \
 		-DPYSIDE_BIN_DIR:PATH=$(PYTHON_ROOT)/Scripts \
 		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
