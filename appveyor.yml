@@ -25,7 +25,7 @@ install:
 
     # nasm
     - cmd: curl http://www.nasm.us/pub/nasm/releasebuilds/2.13.01/win64/nasm-2.13.01-win64.zip -o nasm.zip
-    - cmd: usr\bin\unzip nasm.zip
+    - cmd: usr\bin\unzip -q nasm.zip
     - cmd: chmod -R u+x nasm-2.13.01/nasm.exe
     - cmd: nasm-2.13.01\nasm.exe --version
 
@@ -45,7 +45,7 @@ install:
 
     # Maya 2018 devkit
     - cmd: curl --tlsv1.2 -o mayaDevkit.zip -L https://autodesk.box.com/shared/static/xuesav3biqnaxjgt87bemry9s9uy6og6
-    - cmd: usr\bin\unzip mayaDevkit.zip
+    - cmd: usr\bin\unzip -q mayaDevkit.zip
     - cmd: rm -rf devkitBase/include/tbb
     - cmd: rm -rf devkitBase/include/python2.7
 

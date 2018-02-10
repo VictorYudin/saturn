@@ -62,7 +62,7 @@ $(call PACKAGE_VARS,$(1),$(2),$(3))
 $$($(1)_FILE) :
 	@mkdir -p $(ABSOLUTE_SOURCES_ROOT) && \
 	echo Downloading $$($(1)_FILE)... && \
-	curl --tlsv1.2 --retry 10 -s -o $$@ -L $$($(1)_SOURCE)
+	curl --tlsv1.2 --retry-connrefused --retry 20 -s -o $$@ -L $$($(1)_SOURCE)
 endef
 
 define QT_DOWNLOAD =
