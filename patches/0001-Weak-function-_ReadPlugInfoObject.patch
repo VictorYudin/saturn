@@ -1,7 +1,7 @@
 From dc8aa78c6aa7340b578f8f75274fc7fc8f80d3d7 Mon Sep 17 00:00:00 2001
 From: Victor Yudin <victor@yudin.org>
 Date: Wed, 7 Feb 2018 20:09:51 -0500
-Subject: [PATCH] Weak function _ReadPlugInfoObject
+Subject: [PATCH 1/2] Weak function _ReadPlugInfoObject
 
 It will allow us to use internal plugInfo.json and get rid of garbage on
 hard drive.
