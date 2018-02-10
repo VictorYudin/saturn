@@ -872,7 +872,7 @@ OIIO_LIBS = \
 
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
 TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
-MAYA_ROOT := "C:/Program Files/Autodesk/Maya2016"
+MAYA_ROOT := "C:/Program Files/Autodesk/Maya2018"
 
 ifeq "$(USD_MINIMAL)" "1"
 PXR_BUILD_IMAGING := OFF
@@ -898,8 +898,8 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	echo Patching for supporting MSVC2017... && \
 	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/modules/FindGLEW.cmake ) && \
 	( printf "/Zc:rvalueCast/d\nd\nd\na\nset(_PXR_CXX_FLAGS \"\044{_PXR_CXX_FLAGS} /Zc:rvalueCast /Zc:strictStrings /Zc:inline\")\n.\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
-	echo Patching for Maya 2016 support... && \
-	( printf "/Program Files.*Maya2017/d\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
+	echo Patching for Maya support... && \
+	sed -i "/Program Files/d" cmake/modules/FindMaya.cmake && \
 	( printf "/find_package_handle_standard_args/\n/MAYA_EXECUTABLE/d\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
 	echo Cant irnore Unresolved_external_symbol_error_is_expected_Please_ignore because it always fails... && \
 	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/lib/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
