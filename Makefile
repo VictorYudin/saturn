@@ -76,7 +76,7 @@ $$($(1)_VERSION_FILE) : $$(qt5base_VERSION_FILE) $$($(1)_FILE)/HEAD
 	cd $$(notdir $$(basename $$($(1)_FILE))) && \
 	git checkout -q $$($(1)_VERSION) && \
 	export PATH=$$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$(PYTHON_ABSOLUTE):$$$$PATH && \
-	$$(ABSOLUTE_PREFIX_ROOT)/qt5base/bin/qmake $$(notdir $$(basename $$($(1)_FILE))).pro > $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
+	$$(ABSOLUTE_PREFIX_ROOT)/qt5base/bin/qmake > $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
 	$$(NMAKE) >> $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
 	$$(NMAKE) install >> $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
 	cd $$(THIS_DIR) && \
@@ -108,12 +108,15 @@ $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/js
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
-$(eval $(call GIT_DOWNLOAD,qt5base,v5.10.0,git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v0.8.3,git://github.com/PixarAnimationStudios/USD))
+$(eval $(call GIT_DOWNLOAD,qt5base,v5.10.1,git://github.com/qt/qtbase.git))
+$(eval $(call GIT_DOWNLOAD,usd,v0.8.4,git://github.com/PixarAnimationStudios/USD))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
-$(eval $(call QT_DOWNLOAD,qt5declarative,v5.10.0,git://github.com/qt/qtdeclarative.git))
-$(eval $(call QT_DOWNLOAD,qt5graphicaleffects,v5.10.0,git://github.com/qt/qtgraphicaleffects.git))
-$(eval $(call QT_DOWNLOAD,qt5tools,v5.10.0,git://github.com/qt/qttools.git))
+$(eval $(call QT_DOWNLOAD,qt5creator,v4.5.1,git://github.com/qt-creator/qt-creator.git))
+$(eval $(call QT_DOWNLOAD,qt5declarative,v5.10.1,git://github.com/qt/qtdeclarative.git))
+$(eval $(call QT_DOWNLOAD,qt5graphicaleffects,v5.10.1,git://github.com/qt/qtgraphicaleffects.git))
+$(eval $(call QT_DOWNLOAD,qt5multimedia,v5.10.1,git://github.com/qt/qtmultimedia.git))
+$(eval $(call QT_DOWNLOAD,qt5quickcontrols,v5.10.1,https://github.com/qt/qtquickcontrols2))
+$(eval $(call QT_DOWNLOAD,qt5tools,v5.10.1,git://github.com/qt/qttools.git))
 
 # Number or processors
 JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -157,6 +160,7 @@ COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
 all: usd-archive
+qtextras: qt5declarative qt5graphicaleffects qt5quickcontrols qt5tools qt5multimedia
 .PHONY : all
 .DEFAULT_GOAL := all
 
@@ -669,13 +673,13 @@ $(perl_VERSION_FILE) : $(perl_FILE)
 	tar -xf $(ABSOLUTE_SOURCES_ROOT)/perl-$(perl_VERSION).tar.gz && \
 	cd perl-$(perl_VERSION)/win32 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
-	$(NMAKE) \
+	env -u MAKE -u MAKEFLAGS nmake \
 		CCTYPE=MSVC141 \
 		config.h > $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
-	$(NMAKE) \
+	env -u MAKE -u MAKEFLAGS nmake \
 		CCTYPE=MSVC141 \
 		../perlio.i >> $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
-	$(NMAKE) \
+	env -u MAKE -u MAKEFLAGS nmake \
 		CCTYPE=MSVC141 \
 		INST_TOP="$(subst /,\,$(perl_PREFIX))" \
 		install >> $(ABSOLUTE_PREFIX_ROOT)/log_perl.txt 2>&1 && \
@@ -744,12 +748,6 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(qt5base_FILE))" $(notdir $(basename $(qt5base_FILE))) && \
 	cd $(notdir $(basename $(qt5base_FILE))) && \
 	git checkout -q $(qt5base_VERSION) && \
-	( printf "g/-MD/s/-MD/-MT/g\nw\n" | ed -s mkspecs/common/msvc-desktop.conf ) && \
-	( printf "/\/NODEFAULTLIB/s/\/NODEFAULTLIB/\/NODEFAULTLIB:libucrt.lib \/NODEFAULTLIB:libvcruntime.lib \/NODEFAULTLIB/g\nw\n" | ed -s mkspecs/winrt-x64-msvc2017/qmake.conf ) && \
-	( printf "g/-MD/s/-MD/-MT/g\nw\n" | ed -s mkspecs/common/winrt_winphone/qmake.conf ) && \
-	( printf "/libDirs.*store/a\nlibDirs << toolsInstallDir + QStringLiteral(\"lib/\") + arch;\n.\nw\n" | ed -s qmake/generators/win32/msvc_nmake.cpp ) && \
-	( printf "/#.*error/d\nd\nd\nw\n" | ed -s src/corelib/thread/qthread_win.cpp ) && \
-	( printf "/qt_windows.h/a\n#include <process.h>\n.\nw\n" | ed -s src/corelib/thread/qthread_win.cpp ) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
 	env -u MAKE -u MAKEFLAGS cmd /C configure.bat \
 		$(QT_ADDITIONAL) \
@@ -771,10 +769,11 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 		-qt-freetype \
 		-qt-libpng \
 		-qt-pcre \
-		-release \
-		-static  > $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
+		-release > $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	$(NMAKE) >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	$(NMAKE) install >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
+	printf "[Paths]\nPrefix = .." > qt.conf && \
+	echo cmd /C copy qt.conf "$(qt5base_PREFIX)\bin" && \
 	cd $(THIS_DIR) && \
 	echo $(qt5base_VERSION) > $@
 
@@ -887,8 +886,8 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(usd_FILE))" $(notdir $(basename $(usd_FILE))) && \
 	cd $(notdir $(basename $(usd_FILE))) && \
 	git checkout -q $(usd_VERSION) && \
-	( test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)/patches/0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
-	( test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)/patches/0002-Ability-to-use-custom-log-output.patch" ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || git am "$(WINDOWS_THIS_DIR)\patches\0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || git am "$(WINDOWS_THIS_DIR)\patches\0002-Ability-to-use-custom-log-output.patch" ) && \
 	echo Patching for supporting static OIIO... && \
 	( for f in $(OIIO_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
 	( printf "/find_library.*OPENEXR_.*_LIBRARY/a\nNAMES\n\044{OPENEXR_LIB}-2_2\n.\nw\nq" | ed -s cmake/modules/FindOpenEXR.cmake ) && \
