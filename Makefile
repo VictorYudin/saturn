@@ -2,6 +2,9 @@
 #
 # This is the Windows build recipe for Pixar USD and its dependencies.
 #
+# ..\..\..\lib\cmake\bin\cmake.exe --build . --target install --config Debug
+# set PATH=C:\Temp\saturn-build\jom\bin;%PATH%
+# make MAKE_MODE=debug BOOST_LINK=shared CRT_LINKAGE=shared usd
 
 SOURCES_ROOT=./src
 BUILD_ROOT=./build
@@ -14,9 +17,8 @@ WINDOWS_SOURCES_ROOT := $(shell cygpath -w $(ABSOLUTE_SOURCES_ROOT))
 WINDOWS_BUILD_ROOT := $(shell cygpath -w $(ABSOLUTE_BUILD_ROOT))
 WINDOWS_PREFIX_ROOT := $(subst \,/,$(shell cygpath -w $(ABSOLUTE_PREFIX_ROOT)))
 
-ifeq "$(MAKE_MODE)" ""
 MAKE_MODE := release
-endif
+CRT_LINKAGE := static
 
 ifeq "$(MAKE_MODE)" "debug"
 CMAKE_BUILD_TYPE := Debug
@@ -147,15 +149,23 @@ DEFINES += /DBOOST_ALL_STATIC_LINK
 DEFINES += /DBOOST_PYTHON_STATIC_LIB
 endif
 
+ifeq "$(CRT_LINKAGE)" "static"
+	CRT_FLAG := MT
+	STATIC_RUNTIME := ON
+else
+	CRT_FLAG := MD
+	STATIC_RUNTIME := OFF
+endif
+
 COMMON_CMAKE_FLAGS :=\
 	-G "NMake Makefiles JOM" \
 	-DCMAKE_BUILD_TYPE:STRING=$(CMAKE_BUILD_TYPE) \
-	-DCMAKE_CXX_FLAGS_DEBUG="/MTd $(DEFINES)" \
-	-DCMAKE_CXX_FLAGS_RELEASE="/MT $(DEFINES)" \
-	-DCMAKE_CXX_FLAGS_MINSIZEREL="/MT $(DEFINES)" \
-	-DCMAKE_C_FLAGS_DEBUG="/MTd $(DEFINES)" \
-	-DCMAKE_C_FLAGS_RELEASE="/MT $(DEFINES)" \
-	-DCMAKE_C_FLAGS_MINSIZEREL="/MT $(DEFINES)" \
+	-DCMAKE_CXX_FLAGS_DEBUG="/$(CRT_FLAG)d $(DEFINES)" \
+	-DCMAKE_CXX_FLAGS_RELEASE="/$(CRT_FLAG) $(DEFINES)" \
+	-DCMAKE_CXX_FLAGS_MINSIZEREL="/$(CRT_FLAG) $(DEFINES)" \
+	-DCMAKE_C_FLAGS_DEBUG="/$(CRT_FLAG)d $(DEFINES)" \
+	-DCMAKE_C_FLAGS_RELEASE="/$(CRT_FLAG) $(DEFINES)" \
+	-DCMAKE_C_FLAGS_MINSIZEREL="/$(CRT_FLAG) $(DEFINES)" \
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
@@ -195,7 +205,7 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 		-j $(JOB_COUNT) \
 		link=$(BOOST_LINK) \
 		threading=multi \
-		runtime-link=static \
+		runtime-link=$(CRT_LINKAGE) \
 		address-model=64 \
 		toolset=msvc-14.1 \
 		$(MAKE_MODE) \
@@ -309,7 +319,7 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 		-DCMAKE_INSTALL_PREFIX="$(embree_PREFIX)" \
 		-DEMBREE_ISPC_SUPPORT:BOOL=OFF \
 		-DEMBREE_STATIC_LIB:BOOL=ON \
-		-DEMBREE_STATIC_RUNTIME:BOOL=ON \
+		-DEMBREE_STATIC_RUNTIME:BOOL=$(STATIC_RUNTIME) \
 		-DEMBREE_TUTORIALS:BOOL=OFF \
 		-DGLUT_INCLUDE_DIR:PATH="$(glut_PREFIX)/include" \
 		-DGLUT_glut_LIBRARY:PATH="$(glut_PREFIX)/lib/freeglut_static.lib" \
@@ -392,7 +402,7 @@ $(glut_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_FILE)
 		-DCMAKE_INSTALL_PREFIX="$(glut_PREFIX)" \
 		-DFREEGLUT_BUILD_DEMOS:BOOL=OFF \
 		-DFREEGLUT_BUILD_SHARED_LIBS:BOOL=OFF \
-		-DINSTALL_PDB:BOOL=ON \
+		-DINSTALL_PDB:BOOL=OFF \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_glut.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -413,7 +423,7 @@ $(hdf5_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(hdf5_FILE)
 	( if [ ! -f release_docs/USING_CMake.txt ] ; then touch release_docs/USING_CMake.txt ; fi ) && \
 	( if [ ! -f release_docs/Using_CMake.txt ] ; then touch release_docs/Using_CMake.txt ; fi ) && \
 	( printf '/H5_HAVE_TIMEZONE/s/1/0/\nw\nq' | ed -s config/cmake/ConfigureChecks.cmake ) && \
-	( printf '/"\/MD"/s/MD/MT/\nw\nq' | ed -s config/cmake/HDFMacros.cmake ) && \
+	( test ! $(CRT_LINKAGE) == static || printf '/"\/MD"/s/MD/MT/\nw\nq' | ed -s config/cmake/HDFMacros.cmake ) && \
 	( printf '/HDF5_PRINTF_LL/s/(.*)/(HDF5_PRINTF_LL)/\nw\nq' | ed -s config/cmake/ConfigureChecks.cmake ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
@@ -651,7 +661,7 @@ $(opensubd_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_VERSION_FILE) $(glfw_VER
 		-DNO_GLTESTS:BOOL=ON \
 		-DNO_TESTS:BOOL=ON \
 		-DNO_TUTORIALS:BOOL=ON \
-		-DMSVC_STATIC_CRT:BOOL=ON \
+		-DMSVC_STATIC_CRT:BOOL=$(STATIC_RUNTIME) \
 		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
 		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
 		-DTBB_LOCATION:PATH="$(tbb_PREFIX)" \
@@ -784,6 +794,9 @@ TBB_SUFFIX := _debug
 else
 TBB_CONFIGURATION := Release
 endif
+ifeq "$(CRT_LINKAGE)" "static"
+	TBB_CRT_CONF := -MT
+endif
 $(tbb_VERSION_FILE) : $(tbb_FILE)
 	@echo Building tbb $(tbb_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -792,17 +805,17 @@ $(tbb_VERSION_FILE) : $(tbb_FILE)
 	cd tbb$(tbb_VERSION) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	cmd /C msbuild build/vs2012/makefile.sln \
-		/p:configuration=$(TBB_CONFIGURATION)-MT \
+		/p:configuration=$(TBB_CONFIGURATION)$(TBB_CRT_CONF) \
 		/p:platform=x64 \
 		/p:PlatformToolset=v141 > $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
 	cp -R include/tbb $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
 	cmd /C link /lib /machine:x64 /out:tbb$(TBB_SUFFIX).lib \
-		build/vs2012/x64/tbb/$(TBB_CONFIGURATION)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+		build/vs2012/x64/tbb/$(TBB_CONFIGURATION)$(TBB_CRT_CONF)/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	cmd /C link /lib /machine:x64 /out:tbbmalloc$(TBB_SUFFIX).lib \
-		build/vs2012/x64/tbbmalloc/$(TBB_CONFIGURATION)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+		build/vs2012/x64/tbbmalloc/$(TBB_CONFIGURATION)$(TBB_CRT_CONF)/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	cmd /C link /lib /machine:x64 /out:tbbmalloc_proxy$(TBB_SUFFIX).lib \
-		build/vs2012/x64/tbbmalloc_proxy/$(TBB_CONFIGURATION)-MT/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
+		build/vs2012/x64/tbbmalloc_proxy/$(TBB_CONFIGURATION)$(TBB_CRT_CONF)/*.obj >> $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
 	cp *.lib $(ABSOLUTE_PREFIX_ROOT)/tbb/lib && \
 	cd $(THIS_DIR) && \
@@ -815,7 +828,7 @@ $(tiff_VERSION_FILE) : $(ZLIB_VERSION_FILE) $(tiff_FILE) $(jpeg_VERSION_FILE) $(
 	rm -rf tiff-$(tiff_VERSION) && \
 	tar -xf $(ABSOLUTE_SOURCES_ROOT)/tiff-$(tiff_VERSION).tar.gz && \
 	cd tiff-$(tiff_VERSION) && \
-	( printf '/OPTFLAGS/s/MD/MT/\nw\nq' | ed -s nmake.opt ) && \
+	( test ! $(CRT_LINKAGE) == static || printf '/OPTFLAGS/s/MD/MT/\nw\nq' | ed -s nmake.opt ) && \
 	env -u MAKE -u MAKEFLAGS nmake /f Makefile.vc \
 		JPEG_SUPPORT=1 \
 		JPEG_INCLUDE=-I"$(jpeg_PREFIX)/include" \
@@ -888,6 +901,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	git checkout -q $(usd_VERSION) && \
 	( test ! $(USE_STATIC_BOOST) == ON || git am "$(WINDOWS_THIS_DIR)\patches\0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || git am "$(WINDOWS_THIS_DIR)\patches\0002-Ability-to-use-custom-log-output.patch" ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || git am "$(WINDOWS_THIS_DIR)\patches\0003-Install-PDB-files.patch" ) && \
 	echo Patching for supporting static OIIO... && \
 	( for f in $(OIIO_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
 	( printf "/find_library.*OPENEXR_.*_LIBRARY/a\nNAMES\n\044{OPENEXR_LIB}-2_2\n.\nw\nq" | ed -s cmake/modules/FindOpenEXR.cmake ) && \
