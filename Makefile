@@ -899,9 +899,9 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(usd_FILE))" $(notdir $(basename $(usd_FILE))) && \
 	cd $(notdir $(basename $(usd_FILE))) && \
 	git checkout -q $(usd_VERSION) && \
-	( test ! $(USE_STATIC_BOOST) == ON || git am "$(WINDOWS_THIS_DIR)\patches\0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
-	( test ! $(USE_STATIC_BOOST) == ON || git am "$(WINDOWS_THIS_DIR)\patches\0002-Ability-to-use-custom-log-output.patch" ) && \
-	( test ! $(USE_STATIC_BOOST) == OFF || git am "$(WINDOWS_THIS_DIR)\patches\0003-Install-PDB-files.patch" ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0002-Ability-to-use-custom-log-output.patch" ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || git apply "$(WINDOWS_THIS_DIR)\patches\0003-Install-PDB-files.patch" ) && \
 	echo Patching for supporting static OIIO... && \
 	( for f in $(OIIO_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
 	( printf "/find_library.*OPENEXR_.*_LIBRARY/a\nNAMES\n\044{OPENEXR_LIB}-2_2\n.\nw\nq" | ed -s cmake/modules/FindOpenEXR.cmake ) && \
