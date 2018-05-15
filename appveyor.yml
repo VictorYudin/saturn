@@ -8,6 +8,10 @@ clone_folder: c:\projects\saturn
 install:
     - cmd: set PATH=C:\Program Files\Git\cmd;C:\cygwin64\bin;C:\Program Files (x86)\CMake\bin;C:\Windows\System32;C:\Windows\System32\wbem
 
+    # Strange appveyor requirement
+    - cmd: git config --global user.email "you@example.com"
+    - cmd: git config --global user.name "Your Name"
+
     # Python
     - cmd: curl https://www.python.org/ftp/python/2.7.13/python-2.7.13.amd64.msi -o python.msi
     - cmd: msiexec /a python.msi /qb TARGETDIR=C:\projects\saturn\python
