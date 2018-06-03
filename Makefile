@@ -111,7 +111,7 @@ $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,v5.10.1,git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v0.8.5,git://github.com/PixarAnimationStudios/USD))
+$(eval $(call GIT_DOWNLOAD,usd,v0.8.5a,git://github.com/PixarAnimationStudios/USD))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call QT_DOWNLOAD,qt5creator,v4.5.1,git://github.com/qt-creator/qt-creator.git))
 $(eval $(call QT_DOWNLOAD,qt5declarative,v5.10.1,git://github.com/qt/qtdeclarative.git))
