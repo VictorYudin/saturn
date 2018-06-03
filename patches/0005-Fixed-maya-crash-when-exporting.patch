@@ -1,0 +1,26 @@
+From 94ccedf45157fb3cc45cca931ed5b91a808c40fe Mon Sep 17 00:00:00 2001
+From: Victor Yudin <victor@yudin.org>
+Date: Sun, 3 Jun 2018 14:56:50 -0400
+Subject: [PATCH] Fixed maya crash when exporting
+
+---
+ pxr/base/lib/tf/envSetting.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/pxr/base/lib/tf/envSetting.h b/pxr/base/lib/tf/envSetting.h
+index 108e37f9..560b44de 100644
+--- a/pxr/base/lib/tf/envSetting.h
++++ b/pxr/base/lib/tf/envSetting.h
+@@ -176,6 +176,9 @@ TfGetEnvSetting(TfEnvSetting<T>& setting) {
+         Tf_InitializeEnvSetting(&setting);
+         val = setting._value->load();
+     }
++    if (!val) {
++        return setting._default;
++    }
+     return *val;
+ }
+ 
+-- 
+2.13.0.windows.1
+
