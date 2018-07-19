@@ -14,15 +14,15 @@ Creation applications.
 ## Something else?
 USD has a number of dependencies. Thus, the building script also contains the
 recipes for building lots of VFX (and other) libraries:
-* alembic
 * boost
+* embree
+* freeglut
 * freetype
 * glew
 * glfw
-* glut
-* hdf5
 * ilmbase
 * jpeg
+* libpng
 * oiio
 * openexr
 * opensubdiv
@@ -34,10 +34,6 @@ recipes for building lots of VFX (and other) libraries:
 * zlib
 
 ## What's included?
-USD monolithic library, Python stuff, UsdView and Maya 2016 plugin. It's built
-with Visual Studio 2017 v15.4 and linked with the static version of the run-time
+USD monolithic library, Python stuff, UsdView and Maya 2018 plugin. It's built
+with Visual Studio 2017 v15.x and linked with the static version of the run-time
 library.
-
-### Why Maya 2016?
-Because Maya 2016 API is available to direct download. If
-you know how to download Maya 201x API, please let me know and I update it.
