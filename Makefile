@@ -110,15 +110,15 @@ $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/js
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
-$(eval $(call GIT_DOWNLOAD,qt5base,v5.10.1,git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v0.8.5a,git://github.com/PixarAnimationStudios/USD))
+$(eval $(call GIT_DOWNLOAD,qt5base,v5.11.1,git://github.com/qt/qtbase.git))
+$(eval $(call GIT_DOWNLOAD,usd,v18.09,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call QT_DOWNLOAD,qt5creator,v4.5.1,git://github.com/qt-creator/qt-creator.git))
-$(eval $(call QT_DOWNLOAD,qt5declarative,v5.10.1,git://github.com/qt/qtdeclarative.git))
-$(eval $(call QT_DOWNLOAD,qt5graphicaleffects,v5.10.1,git://github.com/qt/qtgraphicaleffects.git))
-$(eval $(call QT_DOWNLOAD,qt5multimedia,v5.10.1,git://github.com/qt/qtmultimedia.git))
-$(eval $(call QT_DOWNLOAD,qt5quickcontrols,v5.10.1,https://github.com/qt/qtquickcontrols2))
-$(eval $(call QT_DOWNLOAD,qt5tools,v5.10.1,git://github.com/qt/qttools.git))
+$(eval $(call QT_DOWNLOAD,qt5declarative,v5.11.1,git://github.com/qt/qtdeclarative.git))
+$(eval $(call QT_DOWNLOAD,qt5graphicaleffects,v5.11.1,git://github.com/qt/qtgraphicaleffects.git))
+$(eval $(call QT_DOWNLOAD,qt5multimedia,v5.11.1,git://github.com/qt/qtmultimedia.git))
+$(eval $(call QT_DOWNLOAD,qt5quickcontrols,v5.11.1,https://github.com/qt/qtquickcontrols2))
+$(eval $(call QT_DOWNLOAD,qt5tools,v5.11.1,git://github.com/qt/qttools.git))
 
 # Number or processors
 JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -750,6 +750,8 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 
 ifeq "$(QT_PLATFORM)" "winrt"
 QT_ADDITIONAL := -xplatform winrt-x64-msvc2017
+else
+QT_ADDITIONAL := -static
 endif
 $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	@echo Building Qt5 Base $(qt5base_VERSION) $(QT_ADDITIONAL) && \
@@ -899,11 +901,15 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(usd_FILE))" $(notdir $(basename $(usd_FILE))) && \
 	cd $(notdir $(basename $(usd_FILE))) && \
 	git checkout -q $(usd_VERSION) && \
+	( echo git am "$(WINDOWS_THIS_DIR)\patches\moana\0001-WIP-Disney-JSON-support.patch" ) && \
+	( echo git am "$(WINDOWS_THIS_DIR)\patches\moana\0002-WIP-added-variants-into-disney-json.patch" ) && \
+	( echo git am "$(WINDOWS_THIS_DIR)\patches\moana\0003-WIP-playing-with-materials.patch" ) && \
+	( echo git am "$(WINDOWS_THIS_DIR)\patches\moana\0004-WIP-playing-with-materials-01.patch" ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0002-Ability-to-use-custom-log-output.patch" ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || git apply "$(WINDOWS_THIS_DIR)\patches\0003-Install-PDB-files.patch" ) && \
-	( git apply "$(WINDOWS_THIS_DIR)\patches\0004-Revert-Hd-Point-picking-via-Hydra-now-returns-the-co.patch" ) && \
 	( git apply "$(WINDOWS_THIS_DIR)\patches\0005-Fixed-maya-crash-when-exporting.patch" ) && \
+	( git apply "$(WINDOWS_THIS_DIR)\patches\0006-Bug-in-Intel-implementation-of-GL_ARB_shader_draw_pa.patch" ) && \
 	echo Patching for supporting static OIIO... && \
 	( for f in $(OIIO_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
 	( printf "/find_library.*OPENEXR_.*_LIBRARY/a\nNAMES\n\044{OPENEXR_LIB}-2_2\n.\nw\nq" | ed -s cmake/modules/FindOpenEXR.cmake ) && \
@@ -921,13 +927,6 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	( test ! $(USE_STATIC_BOOST) == ON || echo Dont skip plugins when building static libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
-	echo Set Catmull-Clark as default subdivision scheme for all the alembics. It's temporary, while Hydra doesn't consider normals... && \
-	( printf "/UsdGeomTokens->subdivisionScheme/+2\ns/none/catmullClark/\nw\nq" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
-	echo Skip extra stuff because it fails... && \
-	( printf "/add_subdirectory(extras)/d\nw\n" | ed -s CMakeLists.txt ) && \
-	echo Fixed WHOLEARCHIVE bug in Visual Studio 15.4... && \
-	( printf "/TARGET_FILE:usd_m/s/<.*>/{USD_M_TARGET}/\nw\n" | ed -s cmake/macros/Public.cmake ) && \
-	( printf "/MSVC/a\nset(USD_M_TARGET pxr\\\\\\\\usd_m.lib)\n.\nw\n" | ed -s cmake/macros/Public.cmake ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
@@ -952,6 +951,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
+		-DPXR_BUILD_OPENIMAGEIO_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_ENABLE_PYTHON_SUPPORT:BOOL=$(PXR_BUILD_IMAGING) \

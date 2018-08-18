@@ -1,0 +1,25 @@
+From a94eda16454d87043c5bb2a2d8cdf1f964b723e7 Mon Sep 17 00:00:00 2001
+From: Victor Yudin <victor@yudin.org>
+Date: Sat, 18 Aug 2018 16:53:44 -0400
+Subject: [PATCH] Bug in Intel implementation of GL_ARB_shader_draw_parameters
+
+---
+ pxr/imaging/lib/glf/contextCaps.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pxr/imaging/lib/glf/contextCaps.cpp b/pxr/imaging/lib/glf/contextCaps.cpp
+index 3b4f7739..db89ebde 100644
+--- a/pxr/imaging/lib/glf/contextCaps.cpp
++++ b/pxr/imaging/lib/glf/contextCaps.cpp
+@@ -211,7 +211,7 @@ GlfContextCaps::_LoadCaps()
+     if (GLEW_ARB_direct_state_access) {
+         directStateAccessEnabled = true;
+     }
+-    if (GLEW_ARB_shader_draw_parameters) {
++    if (false && GLEW_ARB_shader_draw_parameters) {
+         shaderDrawParametersEnabled = true;
+     }
+ #endif
+-- 
+2.18.0.windows.1
+
