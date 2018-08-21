@@ -706,6 +706,10 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(osl_FILE))" $(notdir $(basename $(osl_FILE))) && \
 	cd $(notdir $(basename $(osl_FILE))) && \
 	git checkout -q $(osl_VERSION) && \
+	echo Disable OSL shaders... && \
+	( printf "/pragma once/a\n#define OSL_STATIC_BUILD\n.\nw\n" | ed -s src/include/OSL/export.h ) && \
+	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(PYTHON_ABSOLUTE):$(ABSOLUTE_PREFIX_ROOT)/boost/lib:$$PATH && \

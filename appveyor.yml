@@ -23,6 +23,16 @@ install:
     - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/unzip/unzip-6.0-17.tar.xz -o unzip.tar.xz
     - cmd: tar -xf unzip.tar.xz
 
+    # flex
+    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/flex/flex-2.6.4-2.tar.xz -o flex.tar.xz
+    - cmd: tar -xf flex.tar.xz
+    - cmd: usr\bin\flex.exe --version
+
+    # bison
+    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/bison/bison-3.0.4-1.tar.xz -o bison.tar.xz
+    - cmd: tar -xf bison.tar.xz
+    - cmd: usr\bin\bison.exe --version
+
     # nasm
     - cmd: curl https://fossies.org/windows/misc/nasm-2.13.03-win64.zip -o nasm.zip
     - cmd: usr\bin\unzip -q nasm.zip
