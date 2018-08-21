@@ -5,6 +5,7 @@
 # ..\..\..\lib\cmake\bin\cmake.exe --build . --target install --config Debug
 # set PATH=C:\Temp\saturn-build\jom\bin;%PATH%
 # make MAKE_MODE=debug BOOST_LINK=shared CRT_LINKAGE=shared usd
+# make BOOST_LINK=shared llvm_EXTERNAL=C:/usr/llvm usd
 
 SOURCES_ROOT=./src
 BUILD_ROOT=./build
@@ -107,8 +108,10 @@ $(eval $(call GIT_DOWNLOAD,glfw,3.2.1,git://github.com/glfw/glfw.git))
 $(eval $(call GIT_DOWNLOAD,jom,v1.1.2,git://github.com/qt-labs/jom.git))
 $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
 $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
+$(eval $(call GIT_DOWNLOAD,materialx,v1.36.0,git://github.com/materialx/MaterialX.git))
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
+$(eval $(call GIT_DOWNLOAD,osl,Release-1.9.9,git://github.com/imageworks/OpenShadingLanguage.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,v5.11.1,git://github.com/qt/qtbase.git))
 $(eval $(call GIT_DOWNLOAD,usd,v18.09,git://github.com/PixarAnimationStudios/USD.git))
@@ -509,6 +512,26 @@ $(jsoncpp_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(jsoncpp_F
 	cd $(THIS_DIR) && \
 	echo $(jsoncpp_VERSION) > $@
 
+# MaterialX
+$(materialx_VERSION_FILE) : $(cmake_VERSION_FILE) $(materialx_FILE)/HEAD
+	@echo Building MaterialX $(materialx_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf materialx && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/materialx.git" materialx && \
+	cd materialx && \
+	git checkout -q $(materialx_VERSION) && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX="$(materialx_PREFIX)" \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_materialx.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_materialx.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(materialx_VERSION) > $@
+
 $(ilmbase_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_FILE)
 	@echo Building IlmBase $(ilmbase_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -674,6 +697,40 @@ $(opensubd_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_VERSION_FILE) $(glfw_VER
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_opensubdiv.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(opensubd_VERSION) > $@
+
+# Open Shading Language
+$(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION_FILE) $(oiio_VERSION_FILE) $(zlib_VERSION_FILE) $(osl_FILE)/HEAD
+	@echo Building OSL $(osl_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(osl_FILE))) && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(osl_FILE))" $(notdir $(basename $(osl_FILE))) && \
+	cd $(notdir $(basename $(osl_FILE))) && \
+	git checkout -q $(osl_VERSION) && \
+	mkdir build && cd build && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	export PATH=$(PYTHON_ABSOLUTE):$(ABSOLUTE_PREFIX_ROOT)/boost/lib:$$PATH && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DBOOST_ROOT="$(boost_PREFIX)" \
+		-DBUILDSTATIC:BOOL=ON \
+		-DCMAKE_INSTALL_PREFIX="$(osl_PREFIX)" \
+		-DILMBASE_HOME="$(ilmbase_PREFIX)" \
+		-DLLVM_DIRECTORY="$(llvm_PREFIX)" \
+		-DLLVM_STATIC:BOOL=ON \
+		-DOPENEXR_HOME="$(openexr_PREFIX)" \
+		-DOPENIMAGEIOHOME="$(oiio_PREFIX)" \
+		-DOSL_BUILD_PLUGINS:BOOL=OFF \
+		-DOSL_BUILD_TESTS:BOOL=OFF \
+		-DUSE_QT:BOOL=OFF \
+		-DUSE_SIMD=sse4.2 \
+		-DZLIB_ROOT="$(zlib_PREFIX)" \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_osl.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_osl.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(osl_VERSION) > $@
 
 # perl
 $(perl_VERSION_FILE) : $(perl_FILE)
@@ -856,7 +913,15 @@ BOOST_LIB_PREFIX :=
 else
 BOOST_LIB_PREFIX := lib
 endif
-OIIO_LIBS = \
+USD_STATIC_LIBS = \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
 	"$(embree_PREFIX)/lib/embree_avx.lib" \
 	"$(embree_PREFIX)/lib/embree_avx2.lib" \
 	"$(embree_PREFIX)/lib/embree_sse42.lib" \
@@ -865,23 +930,16 @@ OIIO_LIBS = \
 	"$(embree_PREFIX)/lib/simd.lib" \
 	"$(embree_PREFIX)/lib/sys.lib" \
 	"$(embree_PREFIX)/lib/tasking.lib" \
-	"$(png_PREFIX)/lib/libpng16_static.lib" \
-	"$(tiff_PREFIX)/lib/libtiff.lib" \
 	"$(jpeg_PREFIX)/lib/turbojpeg-static.lib" \
-	"$(openexr_PREFIX)/lib/IlmImf-2_2.lib" \
-	"$(openexr_PREFIX)/lib/Imath-2_2.lib" \
-	"$(openexr_PREFIX)/lib/Iex-2_2.lib" \
 	"$(openexr_PREFIX)/lib/Half.lib" \
+	"$(openexr_PREFIX)/lib/Iex-2_2.lib" \
+	"$(openexr_PREFIX)/lib/IlmImf-2_2.lib" \
 	"$(openexr_PREFIX)/lib/IlmThread-2_2.lib" \
+	"$(openexr_PREFIX)/lib/Imath-2_2.lib" \
+	"$(osl_PREFIX)/lib/oslquery.lib" \
+	"$(png_PREFIX)/lib/libpng16_static.lib" \
 	"$(ptex_PREFIX)/lib/Ptex.lib" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(DYNAMIC_EXT)" \
+	"$(tiff_PREFIX)/lib/libtiff.lib" \
 	"$(zlib_PREFIX)/lib/zlib.lib"
 
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
@@ -894,7 +952,7 @@ else
 PXR_BUILD_IMAGING := ON
 endif
 
-$(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
+$(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
 	@echo Building usd $(usd_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(usd_FILE))) && \
@@ -911,7 +969,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	( git apply "$(WINDOWS_THIS_DIR)\patches\0005-Fixed-maya-crash-when-exporting.patch" ) && \
 	( git apply "$(WINDOWS_THIS_DIR)\patches\0006-Bug-in-Intel-implementation-of-GL_ARB_shader_draw_pa.patch" ) && \
 	echo Patching for supporting static OIIO... && \
-	( for f in $(OIIO_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
+	( for f in $(USD_STATIC_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
 	( printf "/find_library.*OPENEXR_.*_LIBRARY/a\nNAMES\n\044{OPENEXR_LIB}-2_2\n.\nw\nq" | ed -s cmake/modules/FindOpenEXR.cmake ) && \
 	( printf "/HDF5 REQUIRED/+\nd\nd\nd\nw\nq" | ed -s cmake/defaults/Packages.cmake ) && \
 	( printf "/BOOST_ALL_DYN_LINK/d\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
@@ -927,6 +985,14 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 	( test ! $(USE_STATIC_BOOST) == ON || echo Dont skip plugins when building static libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	echo Patching for MaterialX support on Windows... && \
+	( printf '/libMaterialXCore.a/s/libMaterialXCore.a/MaterialXCore.lib/\nw\nq' | ed -s cmake/modules/FindMaterialX.cmake ) && \
+	( printf "/include/-a\n#include \"pxr/usd/usdMtlx/api.h\"\n.\nw\nq" | ed -s pxr/usd/plugin/usdMtlx/backdoor.h ) && \
+	( printf "/UsdMtlx_TestString/-a\nUSDMTLX_API\n.\nw\nq" | ed -s pxr/usd/plugin/usdMtlx/backdoor.h ) && \
+	( printf "/UsdMtlx_TestFile/-a\nUSDMTLX_API\n.\nw\nq" | ed -s pxr/usd/plugin/usdMtlx/backdoor.h ) && \
+	echo Patching for OSL support on Windows... && \
+	( printf "/DiscoveryTypes/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
+	( printf "/SourceType/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
@@ -939,21 +1005,25 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(embree_VERSION_FILE) $(cmake_VERSI
 		-DEMBREE_LOCATION:PATH="$(embree_PREFIX)" \
 		-DGLEW_LOCATION:PATH="$(glew_PREFIX)" \
 		-DHDF5_ROOT="$(hdf5_PREFIX)" \
+		-DMATERIALX_ROOT="$(materialx_PREFIX)" \
 		-DMAYA_LOCATION:PATH=$(MAYA_ROOT) \
 		-DOIIO_LOCATION:PATH="$(oiio_PREFIX)" \
 		-DOPENEXR_BASE_DIR:PATH="$(ilmbase_PREFIX)" \
 		-DOPENEXR_INCLUDE_DIR:PATH="$(ilmbase_PREFIX)\include" \
 		-DOPENEXR_LOCATION:PATH="$(openexr_PREFIX)" \
 		-DOPENSUBDIV_ROOT_DIR:PATH="$(opensubd_PREFIX)" \
+		-DOSL_LOCATION="$(osl_PREFIX)" \
 		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
 		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=OFF \
 		-DPXR_BUILD_EMBREE_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
+		-DPXR_BUILD_MATERIALX_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
 		-DPXR_BUILD_OPENIMAGEIO_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
+		-DPXR_ENABLE_OSL_SUPPORT:BOOL=ON \
 		-DPXR_ENABLE_PYTHON_SUPPORT:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_LIB_PREFIX="" \
 		-DPYSIDE_BIN_DIR:PATH=$(PYTHON_ROOT)/Scripts \

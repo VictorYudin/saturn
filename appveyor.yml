@@ -37,6 +37,10 @@ install:
     - cmd: curl --tlsv1.2 -o boost.tar.xz -L https://github.com/VictorYudin/saturn-boost/releases/download/1.0.5/boost-1_61_0.tar.xz
     - cmd: tar -xf boost.tar.xz
 
+    # llvm
+    - cmd: curl --tlsv1.2 -o llvm.tar.xz -L https://github.com/VictorYudin/saturn-llvm/releases/download/1.0.4/llvm-5.0.0.tar.xz
+    - cmd: tar -xf llvm.tar.xz
+
     # Put them to PATH
     - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.13.03;C:\projects\saturn\jom\bin;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0
 
@@ -50,7 +54,7 @@ install:
     - cmd: rm -rf devkitBase/include/python2.7
 
 build_script:
-    - cmd: make BOOST_LINK=shared boost_EXTERNAL=C:/projects/saturn/boost PYTHON_BIN=C:/projects/saturn/python/python.exe MAYA_ROOT=C:/projects/saturn/devkitBase -j4
+    - cmd: make BOOST_LINK=shared MAYA_ROOT=C:/projects/saturn/devkitBase PYTHON_BIN=C:/projects/saturn/python/python.exe boost_EXTERNAL=C:/projects/saturn/boost llvm_EXTERNAL=C:/projects/saturn/llvm -j4
 
 artifacts:
     - path: usd*.tar.xz
