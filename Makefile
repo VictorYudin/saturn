@@ -6,6 +6,7 @@
 # set PATH=C:\Temp\saturn-build\jom\bin;%PATH%
 # make MAKE_MODE=debug BOOST_LINK=shared CRT_LINKAGE=shared usd
 # make BOOST_LINK=shared llvm_EXTERNAL=C:/usr/llvm usd
+# make llvm_EXTERNAL=C:/usr/llvm usd
 
 SOURCES_ROOT=./src
 BUILD_ROOT=./build
@@ -138,9 +139,6 @@ BUILD_USD_MAYA_PLUGIN := ON
 else
 USE_STATIC_BOOST := ON
 BUILD_USD_MAYA_PLUGIN := OFF
-# Disable embree
-embree_VERSION_FILE :=
-embree_PREFIX :=
 endif
 
 DEFINES = /DBOOST_ALL_NO_LIB /DPTEX_STATIC
@@ -149,7 +147,6 @@ ifeq "$(BOOST_LINK)" "shared"
 DEFINES += /DBOOST_ALL_DYN_LINK
 else
 DEFINES += /DBOOST_ALL_STATIC_LINK
-DEFINES += /DBOOST_PYTHON_STATIC_LIB
 endif
 
 ifeq "$(CRT_LINKAGE)" "static"
@@ -201,8 +198,11 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' && \
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' >> $(BOOST_USERCONFIG) && \
 	( printf '/handle-static-runtime/\n/EXIT/d\nw\nq' | ed -s Jamroot ) && \
+	( printf '/BOOST_PYTHON_STATIC_LIB/d\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
+	( printf '/BOOST_PYTHON_STATIC_LIB/d\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
 	cmd /C bootstrap.bat msvc > $(ABSOLUTE_PREFIX_ROOT)/log_boost.txt 2>&1 && \
 	./b2 \
+		-d2 \
 		--layout=system \
 		--prefix=$(boost_PREFIX) \
 		-j $(JOB_COUNT) \
@@ -627,6 +627,7 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 		-DUSE_GIF:BOOL=OFF \
 		-DUSE_JPEGTURBO:BOOL=ON \
 		-DUSE_NUKE:BOOL=OFF \
+		-DUSE_PYTHON:BOOL=OFF \
 		-DVERBOSE:BOOL=ON \
 		-DZLIB_ROOT="$(zlib_PREFIX)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
@@ -717,8 +718,10 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 		$(COMMON_CMAKE_FLAGS) \
 		-DBOOST_ROOT="$(boost_PREFIX)" \
 		-DBUILDSTATIC:BOOL=ON \
+		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX="$(osl_PREFIX)" \
 		-DILMBASE_HOME="$(ilmbase_PREFIX)" \
+		-DLINKSTATIC:BOOL=ON \
 		-DLLVM_DIRECTORY="$(llvm_PREFIX)" \
 		-DLLVM_STATIC:BOOL=ON \
 		-DOPENEXR_HOME="$(openexr_PREFIX)" \
@@ -922,7 +925,6 @@ USD_STATIC_LIBS = \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
@@ -945,6 +947,28 @@ USD_STATIC_LIBS = \
 	"$(ptex_PREFIX)/lib/Ptex.lib" \
 	"$(tiff_PREFIX)/lib/libtiff.lib" \
 	"$(zlib_PREFIX)/lib/zlib.lib"
+
+USD_CMAKELISTS_WITH_BOOST = \
+	pxr/base/lib/plug/CMakeLists.txt \
+	pxr/base/lib/tf/CMakeLists.txt \
+	pxr/base/lib/trace/CMakeLists.txt \
+	pxr/base/lib/vt/CMakeLists.txt \
+	pxr/imaging/lib/glf/CMakeLists.txt \
+	pxr/usdImaging/lib/usdImagingGL/CMakeLists.txt \
+	pxr/usdImaging/lib/usdImaging/CMakeLists.txt \
+	pxr/usdImaging/lib/usdviewq/CMakeLists.txt \
+	pxr/usd/lib/ar/CMakeLists.txt \
+	pxr/usd/lib/ndr/CMakeLists.txt \
+	pxr/usd/lib/pcp/CMakeLists.txt \
+	pxr/usd/lib/sdf/CMakeLists.txt \
+	pxr/usd/lib/sdr/CMakeLists.txt \
+	pxr/usd/lib/usdGeom/CMakeLists.txt \
+	pxr/usd/lib/usdRi/CMakeLists.txt \
+	pxr/usd/lib/usdSkel/CMakeLists.txt \
+	pxr/usd/lib/usdUtils/CMakeLists.txt \
+	pxr/usd/lib/usd/CMakeLists.txt \
+	third_party/maya/lib/usdMaya/CMakeLists.txt \
+	third_party/maya/plugin/pxrUsdTranslators/CMakeLists.txt
 
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
 TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
@@ -997,6 +1021,12 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSI
 	echo Patching for OSL support on Windows... && \
 	( printf "/DiscoveryTypes/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
 	( printf "/SourceType/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
+	echo Removing dependencies on boost_python... && \
+	( for f in $(USD_CMAKELISTS_WITH_BOOST); do ( printf "/Boost_PYTHON_LIBRARY/d\nw\nq" | ed -s $$f ); done ) && \
+	( printf "/WHOLEARCHIVE/a\n\044{Boost_PYTHON_LIBRARY}\n-WHOLEARCHIVE:\044{Boost_PYTHON_LIBRARY}\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	( printf "/PXR_BUILD_LOCATION=usd/a\nBOOST_PYTHON_SOURCE\n.\nw\nq" | ed -s cmake/macros/Private.cmake ) && \
+	echo Skip extra stuff... && \
+	( printf "/add_subdirectory(extras)/d\nw\n" | ed -s CMakeLists.txt ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
@@ -1023,7 +1053,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSI
 		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_MATERIALX_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
-		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
+		-DPXR_BUILD_MONOLITHIC:BOOL=ON \
 		-DPXR_BUILD_OPENIMAGEIO_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
