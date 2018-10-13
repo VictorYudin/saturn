@@ -1,3 +1,4 @@
+@echo off
 
 set SATURN_BASE=%cd%
 
@@ -58,6 +59,12 @@ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 python\python.exe get-pip.py
 python\python.exe -m pip install PySide PyOpenGL Jinja2
 
+echo Downloading Maya Devkit
+curl --tlsv1.2 -o mayaDevkit.zip -L https://github.com/VictorYudin/saturn/releases/download/Maya2018Devkit/Maya2018-DEVKIT_Windows.zip
+unzip -q mayaDevkit.zip
+rm -rf devkitBase/include/tbb
+rm -rf devkitBase/include/python2.7
+
 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 
-rem make BOOST_LINK=shared CRT_LINKAGE=shared PYTHON_BIN=python/python.exe usd -j2
+rem make BOOST_LINK=shared CRT_LINKAGE=shared MAYA_ROOT=C:/Users/victor/saturn/devkitBase PYTHON_BIN=C:/Users/victor/saturn/python/python.exe -j4
