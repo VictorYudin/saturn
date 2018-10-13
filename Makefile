@@ -123,6 +123,8 @@ $(eval $(call QT_DOWNLOAD,qt5graphicaleffects,v5.11.1,git://github.com/qt/qtgrap
 $(eval $(call QT_DOWNLOAD,qt5multimedia,v5.11.1,git://github.com/qt/qtmultimedia.git))
 $(eval $(call QT_DOWNLOAD,qt5quickcontrols,v5.11.1,https://github.com/qt/qtquickcontrols2))
 $(eval $(call QT_DOWNLOAD,qt5tools,v5.11.1,git://github.com/qt/qttools.git))
+$(eval $(call QT_DOWNLOAD,qt5webglplugin,v5.11.1,git://github.com/qt/qtwebglplugin.git))
+$(eval $(call QT_DOWNLOAD,qt5websockets,v5.11.1,git://github.com/qt/qtwebsockets.git))
 
 # Number or processors
 JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -169,6 +171,9 @@ COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
+WIN_SDK :=\
+	$(shell cat /proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/WOW6432Node/Microsoft/Microsoft\ SDKs/Windows/v10.0/ProductVersion)
+
 all: usd-archive
 qtextras: qt5declarative qt5graphicaleffects qt5quickcontrols qt5tools qt5multimedia
 .PHONY : all
@@ -188,7 +193,7 @@ else
 BOOST_USERCONFIG := tools/build/src/user-config.jam
 endif
 $(boost_VERSION_FILE) : $(boost_FILE)
-	@echo Building boost $(boost_VERSION) && \
+	@echo Building boost $(boost_VERSION) link=$(BOOST_LINK) runtime-link=$(CRT_LINKAGE) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(BUILD_ROOT) && \
 	rm -rf boost_$(boost_VERSION) && \
 	tar -xf $(ABSOLUTE_SOURCES_ROOT)/boost_$(boost_VERSION).tar.gz && \
@@ -198,8 +203,8 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' && \
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' >> $(BOOST_USERCONFIG) && \
 	( printf '/handle-static-runtime/\n/EXIT/d\nw\nq' | ed -s Jamroot ) && \
-	( printf '/BOOST_PYTHON_STATIC_LIB/d\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
-	( printf '/BOOST_PYTHON_STATIC_LIB/d\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
+	( printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
+	( printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
 	cmd /C bootstrap.bat msvc > $(ABSOLUTE_PREFIX_ROOT)/log_boost.txt 2>&1 && \
 	./b2 \
 		-d2 \
@@ -628,6 +633,7 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 		-DUSE_JPEGTURBO:BOOL=ON \
 		-DUSE_NUKE:BOOL=OFF \
 		-DUSE_PYTHON:BOOL=OFF \
+		-DUSE_QT:BOOL=OFF \
 		-DVERBOSE:BOOL=ON \
 		-DZLIB_ROOT="$(zlib_PREFIX)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
@@ -711,6 +717,9 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 	( printf "/pragma once/a\n#define OSL_STATIC_BUILD\n.\nw\n" | ed -s src/include/OSL/export.h ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/externalpackages.cmake ) && \
+	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
+	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(PYTHON_ABSOLUTE):$(ABSOLUTE_PREFIX_ROOT)/boost/lib:$$PATH && \
@@ -812,10 +821,19 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	cd $(THIS_DIR) && \
 	echo $(ptex_VERSION) > $@
 
-ifeq "$(QT_PLATFORM)" "winrt"
-QT_ADDITIONAL := -xplatform winrt-x64-msvc2017
+ifeq "$(QT_PLATFORM)" "webgl"
+QT_ADDITIONAL := -opengl es2
 else
-QT_ADDITIONAL := -static
+ifeq "$(QT_PLATFORM)" "winrt"
+QT_ADDITIONAL := -xplatform winrt-x64-msvc2017 -angle
+else
+QT_ADDITIONAL := -static -angle
+endif
+endif
+ifeq "$(MAKE_MODE)" "debug"
+QT_ADDITIONAL += -debug
+else
+QT_ADDITIONAL += -release
 endif
 $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	@echo Building Qt5 Base $(qt5base_VERSION) $(QT_ADDITIONAL) && \
@@ -827,7 +845,6 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
 	env -u MAKE -u MAKEFLAGS cmd /C configure.bat \
 		$(QT_ADDITIONAL) \
-		-angle \
 		-confirm-license \
 		-mp \
 		-no-cups \
@@ -835,17 +852,14 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 		-no-gif \
 		-no-libjpeg \
 		-no-openssl \
-		-no-qml-debug \
 		-no-sql-mysql \
 		-no-sql-sqlite \
-		-nomake examples \
 		-nomake tests \
 		-opensource \
 		-prefix "$(qt5base_PREFIX)" \
 		-qt-freetype \
 		-qt-libpng \
-		-qt-pcre \
-		-release > $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
+		-qt-pcre > $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	$(NMAKE) >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	$(NMAKE) install >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	printf "[Paths]\nPrefix = .." > qt.conf && \
@@ -873,6 +887,7 @@ $(tbb_VERSION_FILE) : $(tbb_FILE)
 	cmd /C msbuild build/vs2012/makefile.sln \
 		/p:configuration=$(TBB_CONFIGURATION)$(TBB_CRT_CONF) \
 		/p:platform=x64 \
+		/p:WindowsTargetPlatformVersion=$(WIN_SDK).0 \
 		/p:PlatformToolset=v141 > $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
 	cp -R include/tbb $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
@@ -980,6 +995,11 @@ else
 PXR_BUILD_IMAGING := ON
 endif
 
+ifeq "$(BOOST_LINK)" "shared"
+USD_STATIC_LIBS += \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)"
+endif
+
 $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
 	@echo Building usd $(usd_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -1022,9 +1042,9 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSI
 	( printf "/DiscoveryTypes/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
 	( printf "/SourceType/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
 	echo Removing dependencies on boost_python... && \
-	( for f in $(USD_CMAKELISTS_WITH_BOOST); do ( printf "/Boost_PYTHON_LIBRARY/d\nw\nq" | ed -s $$f ); done ) && \
-	( printf "/WHOLEARCHIVE/a\n\044{Boost_PYTHON_LIBRARY}\n-WHOLEARCHIVE:\044{Boost_PYTHON_LIBRARY}\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
-	( printf "/PXR_BUILD_LOCATION=usd/a\nBOOST_PYTHON_SOURCE\n.\nw\nq" | ed -s cmake/macros/Private.cmake ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || for f in $(USD_CMAKELISTS_WITH_BOOST); do ( printf "/Boost_PYTHON_LIBRARY/d\nw\nq" | ed -s $$f ); done ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || printf "/WHOLEARCHIVE/a\n\044{Boost_PYTHON_LIBRARY}\n-WHOLEARCHIVE:\044{Boost_PYTHON_LIBRARY}\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || printf "/PXR_BUILD_LOCATION=usd/a\nBOOST_PYTHON_SOURCE\n.\nw\nq" | ed -s cmake/macros/Private.cmake ) && \
 	echo Skip extra stuff... && \
 	( printf "/add_subdirectory(extras)/d\nw\n" | ed -s CMakeLists.txt ) && \
 	mkdir -p build && cd build && \
