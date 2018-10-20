@@ -6,6 +6,7 @@
 # set PATH=C:\Temp\saturn-build\jom\bin;%PATH%
 # make MAKE_MODE=debug BOOST_LINK=shared CRT_LINKAGE=shared usd
 # make BOOST_LINK=shared llvm_EXTERNAL=C:/usr/llvm usd
+# make llvm_EXTERNAL=C:/usr/llvm usd
 
 SOURCES_ROOT=./src
 BUILD_ROOT=./build
@@ -122,6 +123,8 @@ $(eval $(call QT_DOWNLOAD,qt5graphicaleffects,v5.11.1,git://github.com/qt/qtgrap
 $(eval $(call QT_DOWNLOAD,qt5multimedia,v5.11.1,git://github.com/qt/qtmultimedia.git))
 $(eval $(call QT_DOWNLOAD,qt5quickcontrols,v5.11.1,https://github.com/qt/qtquickcontrols2))
 $(eval $(call QT_DOWNLOAD,qt5tools,v5.11.1,git://github.com/qt/qttools.git))
+$(eval $(call QT_DOWNLOAD,qt5webglplugin,v5.11.1,git://github.com/qt/qtwebglplugin.git))
+$(eval $(call QT_DOWNLOAD,qt5websockets,v5.11.1,git://github.com/qt/qtwebsockets.git))
 
 # Number or processors
 JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -138,9 +141,6 @@ BUILD_USD_MAYA_PLUGIN := ON
 else
 USE_STATIC_BOOST := ON
 BUILD_USD_MAYA_PLUGIN := OFF
-# Disable embree
-embree_VERSION_FILE :=
-embree_PREFIX :=
 endif
 
 DEFINES = /DBOOST_ALL_NO_LIB /DPTEX_STATIC
@@ -149,7 +149,6 @@ ifeq "$(BOOST_LINK)" "shared"
 DEFINES += /DBOOST_ALL_DYN_LINK
 else
 DEFINES += /DBOOST_ALL_STATIC_LINK
-DEFINES += /DBOOST_PYTHON_STATIC_LIB
 endif
 
 ifeq "$(CRT_LINKAGE)" "static"
@@ -172,6 +171,9 @@ COMMON_CMAKE_FLAGS :=\
 	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
+WIN_SDK :=\
+	$(shell cat /proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/WOW6432Node/Microsoft/Microsoft\ SDKs/Windows/v10.0/ProductVersion)
+
 all: usd-archive
 qtextras: qt5declarative qt5graphicaleffects qt5quickcontrols qt5tools qt5multimedia
 .PHONY : all
@@ -191,7 +193,7 @@ else
 BOOST_USERCONFIG := tools/build/src/user-config.jam
 endif
 $(boost_VERSION_FILE) : $(boost_FILE)
-	@echo Building boost $(boost_VERSION) && \
+	@echo Building boost $(boost_VERSION) link=$(BOOST_LINK) runtime-link=$(CRT_LINKAGE) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(BUILD_ROOT) && \
 	rm -rf boost_$(boost_VERSION) && \
 	tar -xf $(ABSOLUTE_SOURCES_ROOT)/boost_$(boost_VERSION).tar.gz && \
@@ -201,8 +203,11 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' && \
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' >> $(BOOST_USERCONFIG) && \
 	( printf '/handle-static-runtime/\n/EXIT/d\nw\nq' | ed -s Jamroot ) && \
+	( printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
+	( printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
 	cmd /C bootstrap.bat msvc > $(ABSOLUTE_PREFIX_ROOT)/log_boost.txt 2>&1 && \
 	./b2 \
+		-d2 \
 		--layout=system \
 		--prefix=$(boost_PREFIX) \
 		-j $(JOB_COUNT) \
@@ -627,6 +632,8 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 		-DUSE_GIF:BOOL=OFF \
 		-DUSE_JPEGTURBO:BOOL=ON \
 		-DUSE_NUKE:BOOL=OFF \
+		-DUSE_PYTHON:BOOL=OFF \
+		-DUSE_QT:BOOL=OFF \
 		-DVERBOSE:BOOL=ON \
 		-DZLIB_ROOT="$(zlib_PREFIX)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
@@ -710,6 +717,9 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 	( printf "/pragma once/a\n#define OSL_STATIC_BUILD\n.\nw\n" | ed -s src/include/OSL/export.h ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/externalpackages.cmake ) && \
+	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
+	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(PYTHON_ABSOLUTE):$(ABSOLUTE_PREFIX_ROOT)/boost/lib:$$PATH && \
@@ -717,8 +727,10 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 		$(COMMON_CMAKE_FLAGS) \
 		-DBOOST_ROOT="$(boost_PREFIX)" \
 		-DBUILDSTATIC:BOOL=ON \
+		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX="$(osl_PREFIX)" \
 		-DILMBASE_HOME="$(ilmbase_PREFIX)" \
+		-DLINKSTATIC:BOOL=ON \
 		-DLLVM_DIRECTORY="$(llvm_PREFIX)" \
 		-DLLVM_STATIC:BOOL=ON \
 		-DOPENEXR_HOME="$(openexr_PREFIX)" \
@@ -809,10 +821,19 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	cd $(THIS_DIR) && \
 	echo $(ptex_VERSION) > $@
 
-ifeq "$(QT_PLATFORM)" "winrt"
-QT_ADDITIONAL := -xplatform winrt-x64-msvc2017
+ifeq "$(QT_PLATFORM)" "webgl"
+QT_ADDITIONAL := -opengl es2
 else
-QT_ADDITIONAL := -static
+ifeq "$(QT_PLATFORM)" "winrt"
+QT_ADDITIONAL := -xplatform winrt-x64-msvc2017 -angle
+else
+QT_ADDITIONAL := -static -angle
+endif
+endif
+ifeq "$(MAKE_MODE)" "debug"
+QT_ADDITIONAL += -debug
+else
+QT_ADDITIONAL += -release
 endif
 $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	@echo Building Qt5 Base $(qt5base_VERSION) $(QT_ADDITIONAL) && \
@@ -824,7 +845,6 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
 	env -u MAKE -u MAKEFLAGS cmd /C configure.bat \
 		$(QT_ADDITIONAL) \
-		-angle \
 		-confirm-license \
 		-mp \
 		-no-cups \
@@ -832,17 +852,14 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 		-no-gif \
 		-no-libjpeg \
 		-no-openssl \
-		-no-qml-debug \
 		-no-sql-mysql \
 		-no-sql-sqlite \
-		-nomake examples \
 		-nomake tests \
 		-opensource \
 		-prefix "$(qt5base_PREFIX)" \
 		-qt-freetype \
 		-qt-libpng \
-		-qt-pcre \
-		-release > $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
+		-qt-pcre > $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	$(NMAKE) >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	$(NMAKE) install >> $(ABSOLUTE_PREFIX_ROOT)/log_qt5base.txt 2>&1 && \
 	printf "[Paths]\nPrefix = .." > qt.conf && \
@@ -870,6 +887,7 @@ $(tbb_VERSION_FILE) : $(tbb_FILE)
 	cmd /C msbuild build/vs2012/makefile.sln \
 		/p:configuration=$(TBB_CONFIGURATION)$(TBB_CRT_CONF) \
 		/p:platform=x64 \
+		/p:WindowsTargetPlatformVersion=$(WIN_SDK).0 \
 		/p:PlatformToolset=v141 > $(ABSOLUTE_PREFIX_ROOT)/log_tbb.txt 2>&1 && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
 	cp -R include/tbb $(ABSOLUTE_PREFIX_ROOT)/tbb/include && \
@@ -922,7 +940,6 @@ USD_STATIC_LIBS = \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(DYNAMIC_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(DYNAMIC_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(DYNAMIC_EXT)" \
@@ -946,6 +963,28 @@ USD_STATIC_LIBS = \
 	"$(tiff_PREFIX)/lib/libtiff.lib" \
 	"$(zlib_PREFIX)/lib/zlib.lib"
 
+USD_CMAKELISTS_WITH_BOOST = \
+	pxr/base/lib/plug/CMakeLists.txt \
+	pxr/base/lib/tf/CMakeLists.txt \
+	pxr/base/lib/trace/CMakeLists.txt \
+	pxr/base/lib/vt/CMakeLists.txt \
+	pxr/imaging/lib/glf/CMakeLists.txt \
+	pxr/usdImaging/lib/usdImagingGL/CMakeLists.txt \
+	pxr/usdImaging/lib/usdImaging/CMakeLists.txt \
+	pxr/usdImaging/lib/usdviewq/CMakeLists.txt \
+	pxr/usd/lib/ar/CMakeLists.txt \
+	pxr/usd/lib/ndr/CMakeLists.txt \
+	pxr/usd/lib/pcp/CMakeLists.txt \
+	pxr/usd/lib/sdf/CMakeLists.txt \
+	pxr/usd/lib/sdr/CMakeLists.txt \
+	pxr/usd/lib/usdGeom/CMakeLists.txt \
+	pxr/usd/lib/usdRi/CMakeLists.txt \
+	pxr/usd/lib/usdSkel/CMakeLists.txt \
+	pxr/usd/lib/usdUtils/CMakeLists.txt \
+	pxr/usd/lib/usd/CMakeLists.txt \
+	third_party/maya/lib/usdMaya/CMakeLists.txt \
+	third_party/maya/plugin/pxrUsdTranslators/CMakeLists.txt
+
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
 TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
 MAYA_ROOT := "C:/Program Files/Autodesk/Maya2018"
@@ -954,6 +993,11 @@ ifeq "$(USD_MINIMAL)" "1"
 PXR_BUILD_IMAGING := OFF
 else
 PXR_BUILD_IMAGING := ON
+endif
+
+ifeq "$(BOOST_LINK)" "shared"
+USD_STATIC_LIBS += \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(DYNAMIC_EXT)"
 endif
 
 $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
@@ -997,6 +1041,12 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSI
 	echo Patching for OSL support on Windows... && \
 	( printf "/DiscoveryTypes/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
 	( printf "/SourceType/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
+	echo Removing dependencies on boost_python... && \
+	( test ! $(USE_STATIC_BOOST) == ON || for f in $(USD_CMAKELISTS_WITH_BOOST); do ( printf "/Boost_PYTHON_LIBRARY/d\nw\nq" | ed -s $$f ); done ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || printf "/WHOLEARCHIVE/a\n\044{Boost_PYTHON_LIBRARY}\n-WHOLEARCHIVE:\044{Boost_PYTHON_LIBRARY}\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
+	( test ! $(USE_STATIC_BOOST) == ON || printf "/PXR_BUILD_LOCATION=usd/a\nBOOST_PYTHON_SOURCE\n.\nw\nq" | ed -s cmake/macros/Private.cmake ) && \
+	echo Skip extra stuff... && \
+	( printf "/add_subdirectory(extras)/d\nw\n" | ed -s CMakeLists.txt ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
@@ -1023,7 +1073,7 @@ $(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSI
 		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_MATERIALX_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
-		-DPXR_BUILD_MONOLITHIC:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
+		-DPXR_BUILD_MONOLITHIC:BOOL=ON \
 		-DPXR_BUILD_OPENIMAGEIO_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
