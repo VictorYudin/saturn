@@ -43,7 +43,7 @@ echo.
 
 echo Install base cygwin
 cscript /nologo %DLOAD_SCRIPT% https://cygwin.com/setup-x86_64.exe setup-x86_64.exe
-setup-x86_64 --no-admin --root %SATURN_BASE%\cygwin --quiet-mode --no-shortcuts --site http://cygwin.mirror.constant.com/ --categories Base -l %SATURN_BASE%\cygwin\var\cache\apt\packages --packages dos2unix,ncurses,wget,make,vim,ed,flex,bison,nasm,curl,unzip
+setup-x86_64 --no-admin --root %SATURN_BASE%\cygwin --quiet-mode --no-shortcuts --site http://cygwin.mirror.constant.com/ --categories Base -l %SATURN_BASE%\cygwin\var\cache\apt\packages --packages dos2unix,ncurses,wget,make,vim,ed,flex,bison,nasm,curl,unzip,patch,rsync
 
 set PATH=%PATH%;%SATURN_BASE%\cygwin\bin;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0
 
