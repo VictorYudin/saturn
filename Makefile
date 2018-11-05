@@ -140,7 +140,7 @@ endef
 
 QT_VERSION := v5.11.2
 
-ifeq "$$(CURRENT_OS)" "windows"
+ifeq "$(CURRENT_OS)" "windows"
 $(eval $(call CURL_DOWNLOAD,cmake,3.9.1,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION)-win64-x64.zip))
 else
 $(eval $(call CURL_DOWNLOAD,cmake,3.9.1,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION).tar.gz))
@@ -171,7 +171,7 @@ $(eval $(call GIT_DOWNLOAD,materialx,v1.36.0,git://github.com/materialx/Material
 $(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,osl,Release-1.9.9,git://github.com/imageworks/OpenShadingLanguage.git))
-$(eval $(call GIT_DOWNLOAD,ptex,v2.1.28,git://github.com/wdas/ptex.git))
+$(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,v5.11.2,git://github.com/qt/qtbase.git))
@@ -829,7 +829,7 @@ $(openexr_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(zlib_V
 	( printf '/define.*INCLUDED_IMF_ZIP_COMPRESSOR_H/a\n#include <zlib.h>\n.\nw\n' | ed -s IlmImf/ImfZipCompressor.h ) && \
 	( printf '/define.*INCLUDED_IMF_COMPRESSION_H/a\n#include <zlib.h>\n.\nw\n' | ed -s IlmImf/ImfCompression.h ) && \
 	( printf '/define.*INCLUDED_IMF_ZIP_H/a\n#include <zlib.h>\n.\nw\n' | ed -s IlmImf/ImfZip.h ) && \
-	patch -N --no-backup-if-mismatch IlmImf/CMakeLists.txt $(THIS_DIR)/patches/OpenEXR/patch_openexr_cmakelists.diff && \
+	( test ! $(CURRENT_OS) == linux || patch -N --no-backup-if-mismatch IlmImf/CMakeLists.txt $(THIS_DIR)/patches/OpenEXR/patch_openexr_cmakelists.diff ) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DBUILD_SHARED_LIBS:BOOL=OFF \
@@ -1011,13 +1011,13 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DCMAKE_INSTALL_PREFIX="$(ptex_PREFIX)" \
+		-DPTEX_BUILD_SHARED_LIBS=OFF \
 		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
-	rm $(ABSOLUTE_PREFIX_ROOT)/ptex/lib/*$(DYNAMICLIB_EXT) && \
 	cd $(THIS_DIR) && \
 	echo $(ptex_VERSION) > $@
 
