@@ -7,6 +7,9 @@
 # make MAKE_MODE=debug BOOST_LINK=shared CRT_LINKAGE=shared usd
 # make BOOST_LINK=shared llvm_EXTERNAL=C:/usr/llvm usd
 # make llvm_EXTERNAL=C:/usr/llvm usd
+#
+# linux:
+# make SOURCES_ROOT=/home/victor/src BUILD_ROOT=/tmp/build PREFIX_ROOT=/home/victor/usr/saturn
 
 SOURCES_ROOT=./src
 BUILD_ROOT=./build
@@ -123,7 +126,7 @@ endef
 define QT_DOWNLOAD =
 $(call GIT_DOWNLOAD,$(1),$(2),$(3))
 
-$$($(1)_VERSION_FILE) : $$(qt5base_VERSION_FILE) $$($(1)_FILE)/HEAD
+$$($(1)_VERSION_FILE) : $$($(4)_VERSION_FILE) $$($(1)_FILE)/HEAD
 	@echo Building Qt5 $(1) $$($(1)_VERSION) && \
 	mkdir -p $$(ABSOLUTE_BUILD_ROOT) && cd $$(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $$(notdir $$(basename $$($(1)_FILE))) && \
@@ -178,15 +181,15 @@ $(eval $(call GIT_DOWNLOAD,qt5base,v5.11.2,git://github.com/qt/qtbase.git))
 $(eval $(call GIT_DOWNLOAD,usd,v18.11,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call PYPI_INSTALL,PyOpenGL,3.1.1,https://files.pythonhosted.org/packages/9c/1d/4544708aaa89f26c97cc09450bb333a23724a320923e74d73e028b3560f9/PyOpenGL-3.1.0.tar.gz))
-$(eval $(call QT_DOWNLOAD,qt5creator,v4.5.1,git://github.com/qt-creator/qt-creator.git))
-$(eval $(call QT_DOWNLOAD,qt5declarative,${QT_VERSION},git://github.com/qt/qtdeclarative.git))
-$(eval $(call QT_DOWNLOAD,qt5graphicaleffects,${QT_VERSION},git://github.com/qt/qtgraphicaleffects.git))
-$(eval $(call QT_DOWNLOAD,qt5multimedia,${QT_VERSION},git://github.com/qt/qtmultimedia.git))
-$(eval $(call QT_DOWNLOAD,qt5qtxmlpatterns,${QT_VERSION},git://github.com/qt/qtxmlpatterns.git))
-$(eval $(call QT_DOWNLOAD,qt5quickcontrols,${QT_VERSION},https://github.com/qt/qtquickcontrols2))
-$(eval $(call QT_DOWNLOAD,qt5tools,${QT_VERSION},git://github.com/qt/qttools.git))
-$(eval $(call QT_DOWNLOAD,qt5webglplugin,${QT_VERSION},git://github.com/qt/qtwebglplugin.git))
-$(eval $(call QT_DOWNLOAD,qt5websockets,${QT_VERSION},git://github.com/qt/qtwebsockets.git))
+$(eval $(call QT_DOWNLOAD,qt5creator,v4.5.1,git://github.com/qt-creator/qt-creator.git,qt5base))
+$(eval $(call QT_DOWNLOAD,qt5declarative,${QT_VERSION},git://github.com/qt/qtdeclarative.git,qt5base))
+$(eval $(call QT_DOWNLOAD,qt5graphicaleffects,${QT_VERSION},git://github.com/qt/qtgraphicaleffects.git,qt5declarative))
+$(eval $(call QT_DOWNLOAD,qt5multimedia,${QT_VERSION},git://github.com/qt/qtmultimedia.git,qt5declarative))
+$(eval $(call QT_DOWNLOAD,qt5qtxmlpatterns,${QT_VERSION},git://github.com/qt/qtxmlpatterns.git,qt5base))
+$(eval $(call QT_DOWNLOAD,qt5quickcontrols,${QT_VERSION},https://github.com/qt/qtquickcontrols2,qt5declarative))
+$(eval $(call QT_DOWNLOAD,qt5tools,${QT_VERSION},git://github.com/qt/qttools.git,qt5base))
+$(eval $(call QT_DOWNLOAD,qt5webglplugin,${QT_VERSION},git://github.com/qt/qtwebglplugin.git,qt5websockets))
+$(eval $(call QT_DOWNLOAD,qt5websockets,${QT_VERSION},git://github.com/qt/qtwebsockets.git,qt5qtxmlpatterns))
 
 # Number or processors
 JOB_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -1294,7 +1297,7 @@ USD_STATIC_LIBS += \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(STATICLIB_EXT)"
 endif
 
-$(usd_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
+$(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(pysidetools_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
 	@echo Building usd $(usd_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(usd_FILE))) && \
