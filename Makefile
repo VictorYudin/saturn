@@ -1049,7 +1049,11 @@ else
 ifeq "$(QT_PLATFORM)" "winrt"
 QT_ADDITIONAL := -xplatform winrt-x64-msvc2017 -angle
 else
+ifeq "$(QT_PLATFORM)" "webassembly"
+# https://wiki.qt.io/Qt_for_WebAssembly
+else
 QT_ADDITIONAL := -static -angle
+endif
 endif
 endif
 ifeq "$(MAKE_MODE)" "debug"
@@ -1057,6 +1061,13 @@ QT_ADDITIONAL += -debug
 else
 QT_ADDITIONAL += -release
 endif
+ifeq "$(CURRENT_OS)" "windows"
+	QT_CONFIGURE := $(CMD) configure$(BAT_EXT)
+else
+	QT_CONFIGURE := ./configure$(BAT_EXT)
+endif
+# TODO: Use this for static CRT for windows:
+# https://github.com/IENT/YUView/wiki/Compile-Qt-64-bit-with-OpenSSL-using-VisualStudio-2015-and--MT
 $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	@echo Building Qt5 Base $(qt5base_VERSION) $(QT_ADDITIONAL) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -1065,7 +1076,7 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	cd $(notdir $(basename $(qt5base_FILE))) && \
 	git checkout -q $(qt5base_VERSION) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
-	$(CMD) ./configure$(BAT_EXT) \
+	$(QT_CONFIGURE) \
 		$(QT_ADDITIONAL) \
 		-verbose \
 		-confirm-license \
