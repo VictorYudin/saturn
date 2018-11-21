@@ -1,0 +1,123 @@
+From 2f908561c585b7210549574b20f99397466be118 Mon Sep 17 00:00:00 2001
+From: Victor Yudin <victor@yudin.org>
+Date: Sun, 11 Nov 2018 15:40:31 -0500
+Subject: [PATCH] Revert "qendian: Fix float conversions"
+
+This reverts commit 95476bfcf64aa9cb43775ebfe3410ce9565de4d5.
+---
+ src/corelib/global/qendian.h                  | 26 ------------
+ .../corelib/global/qtendian/tst_qtendian.cpp  | 40 ++-----------------
+ 2 files changed, 3 insertions(+), 63 deletions(-)
+
+diff --git a/src/corelib/global/qendian.h b/src/corelib/global/qendian.h
+index 0e67a1ab8e..1cc8a823d9 100644
+--- a/src/corelib/global/qendian.h
++++ b/src/corelib/global/qendian.h
+@@ -41,7 +41,6 @@
+ #ifndef QENDIAN_H
+ #define QENDIAN_H
+ 
+-#include <QtCore/qfloat16.h>
+ #include <QtCore/qglobal.h>
+ 
+ // include stdlib.h and hope that it defines __GLIBC__ for glibc-based systems
+@@ -152,31 +151,6 @@ template <> inline Q_DECL_CONSTEXPR qint8 qbswap<qint8>(qint8 source)
+     return source;
+ }
+ 
+-// floating specializations
+-template<typename Float>
+-Float qbswapFloatHelper(Float source)
+-{
+-    // memcpy call in qFromUnaligned is recognized by optimizer as a correct way of type prunning
+-    auto temp = qFromUnaligned<typename QIntegerForSizeof<Float>::Unsigned>(&source);
+-    temp = qbswap(temp);
+-    return qFromUnaligned<Float>(&temp);
+-}
+-
+-template <> inline qfloat16 qbswap<qfloat16>(qfloat16 source)
+-{
+-    return qbswapFloatHelper(source);
+-}
+-
+-template <> inline float qbswap<float>(float source)
+-{
+-    return qbswapFloatHelper(source);
+-}
+-
+-template <> inline double qbswap<double>(double source)
+-{
+-    return qbswapFloatHelper(source);
+-}
+-
+ /*
+  * qbswap(const T src, const void *dest);
+  * Changes the byte order of \a src from big endian to little endian or vice versa
+diff --git a/tests/auto/corelib/global/qtendian/tst_qtendian.cpp b/tests/auto/corelib/global/qtendian/tst_qtendian.cpp
+index 2345bb39c1..7043969c2f 100644
+--- a/tests/auto/corelib/global/qtendian/tst_qtendian.cpp
++++ b/tests/auto/corelib/global/qtendian/tst_qtendian.cpp
+@@ -64,9 +64,6 @@ struct TestData
+     quint16 data16;
+     quint8 data8;
+ 
+-    float dataFloat;
+-    double dataDouble;
+-
+     quint8 reserved;
+ };
+ 
+@@ -75,7 +72,6 @@ template <> quint8 getData(const TestData &d) { return d.data8; }
+ template <> quint16 getData(const TestData &d) { return d.data16; }
+ template <> quint32 getData(const TestData &d) { return d.data32; }
+ template <> quint64 getData(const TestData &d) { return d.data64; }
+-template <> float getData(const TestData &d) { return d.dataFloat; }
+ 
+ union RawTestData
+ {
+@@ -83,39 +79,9 @@ union RawTestData
+     TestData data;
+ };
+ 
+-template <typename Float>
+-Float int2Float(typename QIntegerForSizeof<Float>::Unsigned i)
+-{
+-    Float result = 0;
+-    memcpy(reinterpret_cast<char *>(&result), reinterpret_cast<const char *>(&i), sizeof (Float));
+-    return result;
+-}
+-
+-static const TestData inNativeEndian = {
+-    Q_UINT64_C(0x0123456789abcdef),
+-    0x00c0ffee,
+-    0xcafe,
+-    0xcf,
+-    int2Float<float>(0x00c0ffeeU),
+-    int2Float<double>(Q_UINT64_C(0x0123456789abcdef)),
+-    '\0'
+-};
+-static const RawTestData inBigEndian = {
+-    "\x01\x23\x45\x67\x89\xab\xcd\xef"
+-    "\x00\xc0\xff\xee"
+-    "\xca\xfe"
+-    "\xcf"
+-    "\x00\xc0\xff\xee"
+-    "\x01\x23\x45\x67\x89\xab\xcd\xef"
+-};
+-static const RawTestData inLittleEndian = {
+-    "\xef\xcd\xab\x89\x67\x45\x23\x01"
+-    "\xee\xff\xc0\x00"
+-    "\xfe\xca"
+-    "\xcf"
+-    "\xee\xff\xc0\x00"
+-    "\xef\xcd\xab\x89\x67\x45\x23\x01"
+-};
++static const TestData inNativeEndian = { Q_UINT64_C(0x0123456789abcdef), 0x00c0ffee, 0xcafe, 0xcf, '\0' };
++static const RawTestData inBigEndian = { "\x01\x23\x45\x67\x89\xab\xcd\xef" "\x00\xc0\xff\xee" "\xca\xfe" "\xcf" };
++static const RawTestData inLittleEndian = { "\xef\xcd\xab\x89\x67\x45\x23\x01" "\xee\xff\xc0\x00" "\xfe\xca" "\xcf" };
+ 
+ #define EXPAND_ENDIAN_TEST(endian)          \
+     do {                                    \
+-- 
+2.18.0.windows.1
+

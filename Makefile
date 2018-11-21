@@ -141,7 +141,7 @@ $$($(1)_VERSION_FILE) : $$($(4)_VERSION_FILE) $$($(1)_FILE)/HEAD
 	echo $$($(1)_VERSION) > $$@
 endef
 
-QT_VERSION := v5.11.2
+QT_VERSION := v5.12.0-beta4
 
 ifeq "$(CURRENT_OS)" "windows"
 $(eval $(call CURL_DOWNLOAD,cmake,3.9.1,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION)-win64-x64.zip))
@@ -177,7 +177,7 @@ $(eval $(call GIT_DOWNLOAD,osl,Release-1.9.9,git://github.com/imageworks/OpenSha
 $(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
-$(eval $(call GIT_DOWNLOAD,qt5base,v5.11.2,git://github.com/qt/qtbase.git))
+$(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
 $(eval $(call GIT_DOWNLOAD,usd,v18.11,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call PYPI_INSTALL,PyOpenGL,3.1.1,https://files.pythonhosted.org/packages/9c/1d/4544708aaa89f26c97cc09450bb333a23724a320923e74d73e028b3560f9/PyOpenGL-3.1.0.tar.gz))
@@ -1053,7 +1053,7 @@ ifeq "$(QT_PLATFORM)" "winrt"
 QT_ADDITIONAL := -xplatform winrt-x64-msvc2017 -angle
 else
 ifeq "$(QT_PLATFORM)" "webassembly"
-# https://wiki.qt.io/Qt_for_WebAssembly
+QT_ADDITIONAL := -xplatform wasm-emscripten -nomake examples
 else
 QT_ADDITIONAL := -static -angle
 endif
@@ -1078,6 +1078,7 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(qt5base_FILE))" $(notdir $(basename $(qt5base_FILE))) && \
 	cd $(notdir $(basename $(qt5base_FILE))) && \
 	git checkout -q $(qt5base_VERSION) && \
+	git apply "$(WINDOWS_THIS_DIR)/patches/Qt/0001-Revert-qendian-Fix-float-conversions.patch" && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
 	$(QT_CONFIGURE) \
 		$(QT_ADDITIONAL) \
