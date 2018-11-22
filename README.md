@@ -37,3 +37,11 @@ recipes for building lots of VFX (and other) libraries:
 USD monolithic library, Python stuff, UsdView and Maya 2018 plugin. It's built
 with Visual Studio 2017 v15.x and linked with the static version of the run-time
 library.
+
+## Linux
+The script works on CentOS 7. It requires the following packages.
+
+```
+sudo yum group install "Development Tools"
+sudo yum install -y nasm ed python-devel mesa-libGL-devel mesa-libGLES-devel mesa-libEGL-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel mesa-libGLU-devel
+```
