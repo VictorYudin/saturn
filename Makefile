@@ -204,6 +204,10 @@ ifeq "$(CURRENT_OS)" "windows"
 	STATICLIB_EXT := .lib
 	DYNAMICLIB_EXT := .dll
 	BAT_EXT := .bat
+
+	# PySide2 on windows should be preinstalled
+	pyside_VERSION_FILE :=
+	pysidetools_VERSION_FILE :=
 else
 	CC := gcc
 	CXX := g++
@@ -304,7 +308,7 @@ endif
 ifeq "$(CURRENT_OS)" "windows"
 	BOOST_PLATFORM_FLAGS := runtime-link=$(CRT_LINKAGE) toolset=msvc-14.1
 else
-	BOOST_PLATFORM_FLAGS := toolset=gcc-4.8
+	BOOST_PLATFORM_FLAGS := cflags="$(FLAGS)" cxxflags="$(FLAGS)" toolset=gcc-4.8
 endif
 $(boost_VERSION_FILE) : $(boost_FILE)
 	@echo Building boost $(boost_VERSION) link=$(BOOST_LINK) runtime-link=$(CRT_LINKAGE) && \
@@ -332,8 +336,6 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 		-j $(JOB_COUNT) \
 		-s NO_BZIP2=1 \
 		address-model=64 \
-		cflags="$(FLAGS)" \
-		cxxflags="$(FLAGS)" \
 		link=$(BOOST_LINK) \
 		threading=multi \
 		$(BOOST_PLATFORM_FLAGS) \
