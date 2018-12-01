@@ -63,6 +63,7 @@ ifeq "$($(1)_EXTERNAL)" ""
 $(1)_VERSION := $(2)
 $(1)_VERSION_FILE := $(ABSOLUTE_PREFIX_ROOT)/built_$(1)
 $(1)_PREFIX := $(WINDOWS_PREFIX_ROOT)/$(1)
+$(1)_UNIX_PREFIX := $(ABSOLUTE_PREFIX_ROOT)/$(1)
 $(1)_SOURCE := $(3)
 $(1)_FILE := $(ABSOLUTE_SOURCES_ROOT)/$$(notdir $$($(1)_SOURCE))
 $(1): $$($(1)_VERSION_FILE)
@@ -73,6 +74,7 @@ $(1)-$$($(1)_VERSION).tar.xz: $$($(1)_VERSION_FILE)
 	tar cfJ $$@ -C $(ABSOLUTE_PREFIX_ROOT) $(1)
 else
 $(1)_PREFIX := $($(1)_EXTERNAL)
+$(1)_UNIX_PREFIX := $$(shell cygpath -u $$($(1)_PREFIX))
 endif
 endef
 
@@ -142,6 +144,7 @@ $$($(1)_VERSION_FILE) : $$($(4)_VERSION_FILE) $$($(1)_FILE)/HEAD
 endef
 
 QT_VERSION := v5.12.0-beta4
+QT_VERSION := v5.11.2
 
 ifeq "$(CURRENT_OS)" "windows"
 $(eval $(call CURL_DOWNLOAD,cmake,3.9.1,https://cmake.org/files/v$$(word 1,$$(subst ., ,$$(cmake_VERSION))).$$(word 2,$$(subst ., ,$$(cmake_VERSION)))/cmake-$$(cmake_VERSION)-win64-x64.zip))
@@ -166,6 +169,7 @@ $(eval $(call CURL_DOWNLOAD,tbb,2017_20161128oss,https://www.threadingbuildingbl
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
 $(eval $(call GIT_DOWNLOAD,embree,v2.17.1,git://github.com/embree/embree.git))
+$(eval $(call GIT_DOWNLOAD,ffmpeg,n4.1,git://github.com/FFmpeg/FFmpeg.git))
 $(eval $(call GIT_DOWNLOAD,glfw,3.2.1,git://github.com/glfw/glfw.git))
 $(eval $(call GIT_DOWNLOAD,jom,v1.1.2,git://github.com/qt-labs/jom.git))
 $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
@@ -180,6 +184,7 @@ $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pys
 $(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
 $(eval $(call GIT_DOWNLOAD,usd,v18.11,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
+$(eval $(call GIT_DOWNLOAD,x264,master,http://git.videolan.org/git/x264.git))
 $(eval $(call PYPI_INSTALL,PyOpenGL,3.1.1,https://files.pythonhosted.org/packages/9c/1d/4544708aaa89f26c97cc09450bb333a23724a320923e74d73e028b3560f9/PyOpenGL-3.1.0.tar.gz))
 $(eval $(call QT_DOWNLOAD,qt5creator,v4.5.1,git://github.com/qt-creator/qt-creator.git,qt5base))
 $(eval $(call QT_DOWNLOAD,qt5declarative,${QT_VERSION},git://github.com/qt/qtdeclarative.git,qt5base))
@@ -320,9 +325,9 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	( test ! $(CURRENT_OS) == linux || echo 'using gcc : 4.8 : "$(CXX)" ;' >> $(BOOST_USERCONFIG) ) && \
 	( test ! $(CURRENT_OS) == windows || echo 'using msvc : 14.1 : "$(CXX)" ;' >> $(BOOST_USERCONFIG) ) && \
 	echo 'using python : $(PYTHON_VERSION_SHORT) : "$(PYTHON_BIN)" : "$(PYTHON_INCLUDE)" : "$(PYTHON_LIBS)" ;' >> $(BOOST_USERCONFIG) && \
-	( printf '/handle-static-runtime/\n/EXIT/d\nw\nq' | ed -s Jamroot ) && \
-	( printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
-	( printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
+	( test ! $(CRT_LINKAGE) == static || printf '/handle-static-runtime/\n/EXIT/d\nw\nq' | ed -s Jamroot ) && \
+	( test ! $(BOOST_LINK) == static || printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
+	( test ! $(BOOST_LINK) == static || printf '/BOOST_PYTHON_STATIC_LIB/s/BOOST_PYTHON_STATIC_LIB/disabled_PYTHON_STATIC_LIB/\nw\nq' | ed -s libs/python/build/Jamfile.v2 ) && \
 	( test ! $(CURRENT_OS) == windows || \
 		cmd /C bootstrap.bat msvc > $(ABSOLUTE_PREFIX_ROOT)/log_boost.txt 2>&1 ) && \
 	( test ! $(CURRENT_OS) == linux || \
@@ -490,6 +495,38 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 	( test ! $(CURRENT_OS) == linux || for i in embree_sse42 embree_avx embree_avx2 simd tasking lexers sys math; do cp lib$$i$(STATICLIB_EXT) $(embree_PREFIX)/lib; done ) && \
 	cd $(THIS_DIR) && \
 	echo $(embree_VERSION) > $@
+
+
+$(ffmpeg_VERSION_FILE) : $(x264_VERSION_FILE) $(zlib_VERSION_FILE) $(ffmpeg_FILE)/HEAD
+	@echo Building ffmpeg $(ffmpeg_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(ffmpeg_FILE))) && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(ffmpeg_FILE))" $(notdir $(basename $(ffmpeg_FILE))) && \
+	cd $(notdir $(basename $(ffmpeg_FILE))) && \
+	git config core.eol lf && \
+	git config core.autocrlf input && \
+	git checkout -qf $(ffmpeg_VERSION) && \
+	./configure --help > $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+	echo Configure... >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+	env PKG_CONFIG_PATH=$(x264_UNIX_PREFIX)/lib/pkgconfig:$(zlib_UNIX_PREFIX)/share/pkgconfig \
+	./configure \
+		--arch=x86_64 \
+		--enable-avisynth \
+		--enable-d3d11va \
+		--enable-dxva2 \
+		--enable-gpl \
+		--enable-libx264 \
+		--enable-version3 \
+		--enable-zlib \
+		--prefix=$(ffmpeg_UNIX_PREFIX) \
+		--target-os=win64 \
+		--toolchain=msvc >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+	echo Make... >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+	make -j$(JOB_COUNT) >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+	echo Install... >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+	make install >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(ffmpeg_VERSION) > $@
 
 
 # glew
@@ -1038,6 +1075,9 @@ $(pyside_VERSION_FILE) : $(cmake_VERSION_FILE) $(llvm_VERSION_FILE) $(qt5base_VE
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	( printf "/self.install_dir =/a\n        self.real_install_dir = '$(pyside_PREFIX)'\n.\nw\n" | ed -s build_scripts/main.py ) && \
 	( printf "/CMAKE_INSTALL_PREFIX/s/install_dir/real_install_dir/\nw\n" | ed -s build_scripts/main.py ) && \
+	( printf "/copydir/s/force=True/force=False/\nw\n" | ed -s build_scripts/utils.py ) && \
+	( printf "/QSslPreSharedKeyAuthenticator/d\nw\n" | ed -s sources/pyside2/PySide2/QtNetwork/CMakeLists.txt ) && \
+	( printf "/QSslPreSharedKeyAuthenticator/d\nw\n" | ed -s sources/pyside2/PySide2/QtNetwork/typesystem_network.xml ) && \
 	env LLVM_INSTALL_DIR=$(llvm_PREFIX) \
 	$(PYTHON_BIN) setup.py \
 		build \
@@ -1048,24 +1088,34 @@ $(pyside_VERSION_FILE) : $(cmake_VERSION_FILE) $(llvm_VERSION_FILE) $(qt5base_VE
 	echo $(pyside_VERSION) > $@
 
 
+# QT BASE
+ifeq "$(MAKE_MODE)" "debug"
+QT_ADDITIONAL := -debug
+else
+QT_ADDITIONAL := -release
+endif
+
+QT_LINK := static
+ifeq "$(QT_LINK)" "static"
+QT_ADDITIONAL += -static
+endif
+
 ifeq "$(QT_PLATFORM)" "webgl"
-QT_ADDITIONAL := -opengl es2
+QT_ADDITIONAL += -opengl es2
 else
 ifeq "$(QT_PLATFORM)" "winrt"
-QT_ADDITIONAL := -xplatform winrt-x64-msvc2017 -angle
+QT_ADDITIONAL += -xplatform winrt-x64-msvc2017 -angle
 else
 ifeq "$(QT_PLATFORM)" "webassembly"
-QT_ADDITIONAL := -xplatform wasm-emscripten -nomake examples
+QT_ADDITIONAL += -xplatform wasm-emscripten -nomake examples
 else
-QT_ADDITIONAL := -static -angle
+ifeq "$(CURRENT_OS)" "windows"
+QT_ADDITIONAL += -angle
 endif
 endif
 endif
-ifeq "$(MAKE_MODE)" "debug"
-QT_ADDITIONAL += -debug
-else
-QT_ADDITIONAL += -release
 endif
+
 ifeq "$(CURRENT_OS)" "windows"
 	QT_CONFIGURE := $(CMD) configure$(BAT_EXT)
 else
@@ -1080,7 +1130,7 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(qt5base_FILE))" $(notdir $(basename $(qt5base_FILE))) && \
 	cd $(notdir $(basename $(qt5base_FILE))) && \
 	git checkout -q $(qt5base_VERSION) && \
-	git apply "$(WINDOWS_THIS_DIR)/patches/Qt/0001-Revert-qendian-Fix-float-conversions.patch" && \
+	( test ! $(qt5base_VERSION) == v5.12.0-beta4 || git apply "$(WINDOWS_THIS_DIR)/patches/Qt/0001-Revert-qendian-Fix-float-conversions.patch" ) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$PATH && \
 	$(QT_CONFIGURE) \
 		$(QT_ADDITIONAL) \
@@ -1091,9 +1141,9 @@ $(qt5base_VERSION_FILE) : $(perl_VERSION_FILE) $(qt5base_FILE)/HEAD
 		-no-directwrite \
 		-no-gif \
 		-no-libjpeg \
-		-no-openssl \
 		-no-sql-mysql \
 		-no-sql-sqlite \
+		-no-openssl \
 		-nomake tests \
 		-opensource \
 		-prefix "$(qt5base_PREFIX)" \
@@ -1218,6 +1268,20 @@ else
 endif
 
 
+USD_LINK := monolithic
+ifeq "$(USD_LINK)" "static"
+USD_BUILD_SHARED_LIBS := OFF
+PXR_BUILD_MONOLITHIC := OFF
+else
+ifeq "$(USD_LINK)" "shared"
+USD_BUILD_SHARED_LIBS := ON
+PXR_BUILD_MONOLITHIC := OFF
+else
+USD_BUILD_SHARED_LIBS := OFF
+PXR_BUILD_MONOLITHIC := ON
+endif
+endif
+
 BOOST_NAMESPACE := boost
 ifeq "$(BOOST_LINK)" "shared"
 BOOST_LIB_PREFIX :=
@@ -1301,7 +1365,7 @@ USD_STATIC_LIBS += \
 endif
 
 $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(pysidetools_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
-	@echo Building usd $(usd_VERSION) && \
+	@echo Building usd $(usd_VERSION) shared:$(USD_BUILD_SHARED_LIBS) monolithic:$(PXR_BUILD_MONOLITHIC) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(usd_FILE))) && \
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(usd_FILE))" $(notdir $(basename $(usd_FILE))) && \
@@ -1329,11 +1393,6 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	( test ! $(USE_STATIC_BOOST) == ON || echo USD: Dont skip plugins when building static libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
-	echo USD: Patching for MaterialX support on Windows... && \
-	( test ! $(CURRENT_OS) == windows || printf '/libMaterialXCore.a/s/libMaterialXCore.a/MaterialXCore.lib/\nw\nq' | ed -s cmake/modules/FindMaterialX.cmake ) && \
-	( test ! $(CURRENT_OS) == windows || printf "/include/-a\n#include \"pxr/usd/usdMtlx/api.h\"\n.\nw\nq" | ed -s pxr/usd/plugin/usdMtlx/backdoor.h ) && \
-	( test ! $(CURRENT_OS) == windows || printf "/UsdMtlx_TestString/-a\nUSDMTLX_API\n.\nw\nq" | ed -s pxr/usd/plugin/usdMtlx/backdoor.h ) && \
-	( test ! $(CURRENT_OS) == windows || printf "/UsdMtlx_TestFile/-a\nUSDMTLX_API\n.\nw\nq" | ed -s pxr/usd/plugin/usdMtlx/backdoor.h ) && \
 	echo USD: Patching for OSL support on Windows... && \
 	( test ! $(CURRENT_OS) == windows || printf "/DiscoveryTypes/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
 	( test ! $(CURRENT_OS) == windows || printf "/SourceType/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
@@ -1353,7 +1412,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 		$(COMMON_CMAKE_FLAGS) \
 		-DALEMBIC_DIR="$(alembic_PREFIX)" \
 		-DBOOST_ROOT:PATH="$(boost_PREFIX)" \
-		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DBUILD_SHARED_LIBS:BOOL=$(USD_BUILD_SHARED_LIBS) \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX="$(usd_PREFIX)" \
 		-DEMBREE_LOCATION:PATH="$(embree_PREFIX)" \
@@ -1373,7 +1432,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_MATERIALX_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
-		-DPXR_BUILD_MONOLITHIC:BOOL=ON \
+		-DPXR_BUILD_MONOLITHIC:BOOL=$(PXR_BUILD_MONOLITHIC) \
 		-DPXR_BUILD_OPENIMAGEIO_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
@@ -1396,6 +1455,27 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 
+
+$(x264_VERSION_FILE) : $(x264_FILE)/HEAD
+	@echo Building x264 $(x264_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(x264_FILE))) && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(x264_FILE))" $(notdir $(basename $(x264_FILE))) && \
+	cd $(notdir $(basename $(x264_FILE))) && \
+	git config core.eol lf && \
+	git config core.autocrlf input && \
+	git checkout -q $(x264_VERSION) && \
+	env CC=cl \
+	./configure \
+		--enable-static \
+		--prefix=$(x264_UNIX_PREFIX) > $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
+	make -j$(JOB_COUNT) >> $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
+	( printf '/cygdrive/s/\/cygdrive\/c/c:/\nw\n' | ed -s x264.pc ) && \
+	make install >> $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(x264_VERSION) > $@
+
+
 # libz
 $(zlib_VERSION_FILE) : $(zlib_FILE)/HEAD
 ifeq "$(CURRENT_OS)" "windows"
@@ -1406,11 +1486,19 @@ ifeq "$(CURRENT_OS)" "windows"
 	cd $(notdir $(basename $(zlib_FILE))) && \
 	git checkout -q $(zlib_VERSION) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
-	env -u MAKE -u MAKEFLAGS nmake -f win32/Makefile.msc all > $(ABSOLUTE_PREFIX_ROOT)/log_zlib.txt 2>&1 && \
-	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/zlib/include && \
-	mkdir -p $(ABSOLUTE_PREFIX_ROOT)/zlib/lib && \
-	cp *.h $(ABSOLUTE_PREFIX_ROOT)/zlib/include && \
-	cp zlib.lib $(ABSOLUTE_PREFIX_ROOT)/zlib/lib && \
+	( printf "/install.*zlib.zlibstatic/s/zlib//\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/add_library.zlibstatic/a\nset_target_properties(zlib PROPERTIES OUTPUT_NAME \"zlibdynamic\")\n.\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/add_library.zlibstatic/a\nset_target_properties(zlibstatic PROPERTIES OUTPUT_NAME \"zlib\")\n.\nw\n" | ed -s CMakeLists.txt ) && \
+	( printf "/#  define Z_HAVE_UNISTD_H/d\nw\n" | ed -s zconf.h.cmakein ) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX="$(zlib_PREFIX)" \
+		. > $(ABSOLUTE_PREFIX_ROOT)/log_zlib.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_zlib.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(zlib_VERSION) > $@
 else
