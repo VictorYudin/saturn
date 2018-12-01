@@ -1073,9 +1073,6 @@ $(pyside_VERSION_FILE) : $(cmake_VERSION_FILE) $(llvm_VERSION_FILE) $(qt5base_VE
 	cd $(notdir $(basename $(pyside_FILE))) && \
 	git checkout -q $(pyside_VERSION) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
-	( printf "/self.install_dir =/a\n        self.real_install_dir = '$(pyside_PREFIX)'\n.\nw\n" | ed -s build_scripts/main.py ) && \
-	( printf "/CMAKE_INSTALL_PREFIX/s/install_dir/real_install_dir/\nw\n" | ed -s build_scripts/main.py ) && \
-	( printf "/copydir/s/force=True/force=False/\nw\n" | ed -s build_scripts/utils.py ) && \
 	( printf "/QSslPreSharedKeyAuthenticator/d\nw\n" | ed -s sources/pyside2/PySide2/QtNetwork/CMakeLists.txt ) && \
 	( printf "/QSslPreSharedKeyAuthenticator/d\nw\n" | ed -s sources/pyside2/PySide2/QtNetwork/typesystem_network.xml ) && \
 	env LLVM_INSTALL_DIR=$(llvm_PREFIX) \
@@ -1084,6 +1081,8 @@ $(pyside_VERSION_FILE) : $(cmake_VERSION_FILE) $(llvm_VERSION_FILE) $(qt5base_VE
 		--qmake=$(qt5base_PREFIX)/bin/qmake \
 		--cmake=$(cmake_PREFIX)/bin/cmake \
 		--jobs=$(JOB_COUNT) > $(ABSOLUTE_PREFIX_ROOT)/log_pyside.txt 2>&1 && \
+	rm -rf $(pyside_PREFIX) && \
+	mv pyside2_install/py2.7-qt*-64bit-release $(pyside_PREFIX) && \
 	cd $(THIS_DIR) && \
 	echo $(pyside_VERSION) > $@
 
@@ -1364,7 +1363,7 @@ USD_STATIC_LIBS += \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(STATICLIB_EXT)"
 endif
 
-$(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(pysidetools_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
+$(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
 	@echo Building usd $(usd_VERSION) shared:$(USD_BUILD_SHARED_LIBS) monolithic:$(PXR_BUILD_MONOLITHIC) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(usd_FILE))) && \
