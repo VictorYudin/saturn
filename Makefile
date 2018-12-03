@@ -1469,7 +1469,8 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 		--config $(CMAKE_BUILD_TYPE) \
 		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
 	( test ! $(USE_STATIC_BOOST) == OFF || echo Including boost shared libraries... ) && \
-	( test ! $(USE_STATIC_BOOST) == OFF || cmd /C copy $(subst /,\\,$(boost_PREFIX)/lib/*.dll) $(subst /,\\,$(usd_PREFIX)/lib) ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == windows || cmd /C copy $(subst /,\\,$(boost_PREFIX)/lib/*.dll) $(subst /,\\,$(usd_PREFIX)/lib) ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == linux || cp $(boost_PREFIX)/lib/*$(DYNAMICLIB_EXT) $(usd_PREFIX)/lib ) && \
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 
