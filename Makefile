@@ -1371,7 +1371,7 @@ endif
 
 ifeq "$(BOOST_LINK)" "shared"
 USD_STATIC_LIBS += \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(BOOST_LIB_PREFIX)"
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(BOOST_LIB_EXT)"
 endif
 
 $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
