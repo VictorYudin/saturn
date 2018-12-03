@@ -1,18 +1,18 @@
-From d5809ee7e02c77c0c08d8a9d36823670ad4ea6d3 Mon Sep 17 00:00:00 2001
+From 6e08edce84a0a7f0c1b43039ec4922ca85cec1ea Mon Sep 17 00:00:00 2001
 From: Victor Yudin <victor@yudin.org>
-Date: Tue, 1 May 2018 08:23:43 -0400
+Date: Sun, 2 Dec 2018 10:16:57 -0500
 Subject: [PATCH] Install PDB files
 
 ---
- cmake/macros/Private.cmake | 18 ++++++++++++++++++
+ cmake/macros/Private.cmake | 24 ++++++++++++++++++++++++
  cmake/macros/Public.cmake  |  6 ++++++
- 2 files changed, 24 insertions(+)
+ 2 files changed, 30 insertions(+)
 
 diff --git a/cmake/macros/Private.cmake b/cmake/macros/Private.cmake
-index db731f3c..58fb97b4 100644
+index 761bcf6d..02d88ddf 100644
 --- a/cmake/macros/Private.cmake
 +++ b/cmake/macros/Private.cmake
-@@ -1037,6 +1037,12 @@ function(_pxr_python_module NAME)
+@@ -1027,6 +1027,12 @@ function(_pxr_python_module NAME)
          LIBRARY DESTINATION ${libInstallPrefix}
          RUNTIME DESTINATION ${libInstallPrefix}
      )
@@ -25,7 +25,7 @@ index db731f3c..58fb97b4 100644
      
      if(NOT "${PXR_PREFIX}" STREQUAL "")
          if(args_PRECOMPILED_HEADERS)
-@@ -1322,6 +1328,12 @@ function(_pxr_library NAME)
+@@ -1291,6 +1297,12 @@ function(_pxr_library NAME)
                  PUBLIC_HEADER DESTINATION ${headerInstallPrefix}
              )
  
@@ -38,7 +38,13 @@ index db731f3c..58fb97b4 100644
              export(TARGETS ${NAME}
                  APPEND
                  FILE "${PROJECT_BINARY_DIR}/pxrTargets.cmake"
-@@ -1334,6 +1346,12 @@ function(_pxr_library NAME)
+@@ -1298,11 +1310,23 @@ function(_pxr_library NAME)
+         else()
+             install(
+                 TARGETS ${NAME}
++                EXPORT pxrTargets
+                 LIBRARY DESTINATION ${libInstallPrefix}
+                 ARCHIVE DESTINATION ${libInstallPrefix}
                  RUNTIME DESTINATION ${libInstallPrefix}
                  PUBLIC_HEADER DESTINATION ${headerInstallPrefix}
              )
@@ -48,14 +54,19 @@ index db731f3c..58fb97b4 100644
 +                DESTINATION ${libInstallPrefix}
 +                OPTIONAL
 +            )
++
++            export(TARGETS ${NAME}
++                APPEND
++                FILE "${PROJECT_BINARY_DIR}/pxrTargets.cmake"
++            )
          endif()
      endif()
      _install_resource_files(
 diff --git a/cmake/macros/Public.cmake b/cmake/macros/Public.cmake
-index 3b8f84d2..c1ffaf09 100644
+index 583a56a2..8421b379 100644
 --- a/cmake/macros/Public.cmake
 +++ b/cmake/macros/Public.cmake
-@@ -848,6 +848,12 @@ function(pxr_toplevel_prologue)
+@@ -898,6 +898,12 @@ function(pxr_toplevel_prologue)
                  ARCHIVE DESTINATION ${libInstallPrefix}
                  RUNTIME DESTINATION ${libInstallPrefix}
              )
@@ -69,5 +80,5 @@ index 3b8f84d2..c1ffaf09 100644
      endif()
  
 -- 
-2.13.0.windows.1
+2.18.0.windows.1
 

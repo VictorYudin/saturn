@@ -287,6 +287,7 @@ COMPILER_CONF :=\
 	CXXFLAGS="$(FLAGS)"
 
 all: usd-archive
+qtquick: qt5graphicaleffects qt5quickcontrols qt5multimedia
 qtextras: qt5declarative qt5graphicaleffects qt5quickcontrols qt5tools qt5multimedia
 .PHONY : all
 .DEFAULT_GOAL := all
@@ -1108,9 +1109,7 @@ else
 ifeq "$(QT_PLATFORM)" "webassembly"
 QT_ADDITIONAL += -xplatform wasm-emscripten -nomake examples
 else
-ifeq "$(CURRENT_OS)" "windows"
-QT_ADDITIONAL += -angle
-endif
+QT_ADDITIONAL += -opengl desktop
 endif
 endif
 endif
@@ -1402,6 +1401,12 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/PXR_BUILD_LOCATION=usd/a\nBOOST_PYTHON_SOURCE\n.\nw\nq" | ed -s cmake/macros/Private.cmake ) && \
 	echo USD: Skip extra stuff... && \
 	( printf "/add_subdirectory(extras)/d\nw\n" | ed -s CMakeLists.txt ) && \
+	echo USD: Generate better pxrConfig.cmake... && \
+	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/foreach/a\nset_target_properties(\044{lib} PROPERTIES IMPORTED_IMPLIB_MINSIZEREL \"\044{PXR_CMAKE_DIR}/lib/$(LIB_PREFIX)usd_ms$(STATICLIB_EXT)\" IMPORTED_LOCATION_MINSIZEREL \"\044{PXR_CMAKE_DIR}/lib/$(LIB_PREFIX)usd_ms$(DYNAMICLIB_EXT)\")\n.\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
+	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/foreach/a\nset_property(TARGET \044{lib} APPEND PROPERTY IMPORTED_CONFIGURATIONS MINSIZEREL)\n.\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
+	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/foreach/a\nset_target_properties(\044{lib} PROPERTIES INTERFACE_COMPILE_DEFINITIONS \"PXR_PYTHON_ENABLED=1;NOMINMAX;BOOST_ALL_NO_LIB\" INTERFACE_INCLUDE_DIRECTORIES \"\044{PXR_CMAKE_DIR}/include;$(boost_PREFIX)/include;$(tbb_PREFIX)/include;$(PYTHON_INCLUDE)\" INTERFACE_LINK_LIBRARIES \"\044{PXR_CMAKE_DIR}/lib/$(LIB_PREFIX)usd_ms$(STATICLIB_EXT);$(tbb_PREFIX)/lib/$(LIB_PREFIX)tbb$(STATICLIB_EXT);$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)boost_python$(STATICLIB_EXT);$(PYTHON_LIBS)/$(LIB_PREFIX)python27$(STATICLIB_EXT)\")\n.\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
+	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/foreach/a\nadd_library(\044{lib} SHARED IMPORTED)\n.\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
+	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/pxrTargets/d\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/pyside/bin:$$PATH && \
