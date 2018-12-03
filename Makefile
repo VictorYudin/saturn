@@ -1281,20 +1281,32 @@ endif
 endif
 
 BOOST_NAMESPACE := boost
+
+
+ifeq "$(CURRENT_OS)" "windows"
+# Windows
+LIB_PREFIX :=
+ZLIB_LIBRARY := $(zlib_PREFIX)/lib/zlib$(STATICLIB_EXT)
+JPEG_LIBRARY := $(jpeg_PREFIX)/lib/$(LIB_PREFIX)turbojpeg-static$(STATICLIB_EXT)
+BOOST_LIB_EXT := .lib
+
 ifeq "$(BOOST_LINK)" "shared"
 BOOST_LIB_PREFIX :=
 else
 BOOST_LIB_PREFIX := lib
 endif
-
-ifeq "$(CURRENT_OS)" "windows"
-LIB_PREFIX :=
-ZLIB_LIBRARY := $(zlib_PREFIX)/lib/zlib$(STATICLIB_EXT)
-JPEG_LIBRARY := $(jpeg_PREFIX)/lib/$(LIB_PREFIX)turbojpeg-static$(STATICLIB_EXT)
 else
+# Linux
 LIB_PREFIX := lib
 ZLIB_LIBRARY := $(zlib_PREFIX)/lib/libz$(STATICLIB_EXT)
 JPEG_LIBRARY := $(jpeg_PREFIX)/lib/$(LIB_PREFIX)turbojpeg$(STATICLIB_EXT)
+BOOST_LIB_PREFIX := lib
+
+ifeq "$(BOOST_LINK)" "shared"
+BOOST_LIB_EXT := .so
+else
+BOOST_LIB_EXT := .a
+endif
 endif
 
 USD_STATIC_LIBS = \
@@ -1308,13 +1320,13 @@ USD_STATIC_LIBS = \
 	"$(ptex_PREFIX)/lib/$(LIB_PREFIX)Ptex$(STATICLIB_EXT)" \
 	"$(ZLIB_LIBRARY)" \
 	"$(tiff_PREFIX)/lib/libtiff$(STATICLIB_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(STATICLIB_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(STATICLIB_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_filesystem$(BOOST_LIB_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_regex$(BOOST_LIB_EXT)" \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_system$(STATICLIB_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(STATICLIB_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(STATICLIB_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(STATICLIB_EXT)" \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(STATICLIB_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_thread$(BOOST_LIB_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_chrono$(BOOST_LIB_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_date_time$(BOOST_LIB_EXT)" \
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_atomic$(BOOST_LIB_EXT)" \
 	"$(embree_PREFIX)/lib/$(LIB_PREFIX)embree_avx$(STATICLIB_EXT)" \
 	"$(embree_PREFIX)/lib/$(LIB_PREFIX)embree_avx2$(STATICLIB_EXT)" \
 	"$(embree_PREFIX)/lib/$(LIB_PREFIX)embree_sse42$(STATICLIB_EXT)" \
@@ -1359,7 +1371,7 @@ endif
 
 ifeq "$(BOOST_LINK)" "shared"
 USD_STATIC_LIBS += \
-	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(STATICLIB_EXT)"
+	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(BOOST_LIB_PREFIX)"
 endif
 
 $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
@@ -1407,6 +1419,8 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/foreach/a\nset_target_properties(\044{lib} PROPERTIES INTERFACE_COMPILE_DEFINITIONS \"PXR_PYTHON_ENABLED=1;NOMINMAX;BOOST_ALL_NO_LIB\" INTERFACE_INCLUDE_DIRECTORIES \"\044{PXR_CMAKE_DIR}/include;$(boost_PREFIX)/include;$(tbb_PREFIX)/include;$(PYTHON_INCLUDE)\" INTERFACE_LINK_LIBRARIES \"\044{PXR_CMAKE_DIR}/lib/$(LIB_PREFIX)usd_ms$(STATICLIB_EXT);$(tbb_PREFIX)/lib/$(LIB_PREFIX)tbb$(STATICLIB_EXT);$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)boost_python$(STATICLIB_EXT);$(PYTHON_LIBS)/$(LIB_PREFIX)python27$(STATICLIB_EXT)\")\n.\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
 	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/foreach/a\nadd_library(\044{lib} SHARED IMPORTED)\n.\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
 	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/pxrTargets/d\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
+	echo USD: Using static embree... && \
+	( printf "/libembree.so/s/so/a/\nw\nq" | ed -s cmake/modules/FindEmbree.cmake ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/pyside/bin:$$PATH && \
