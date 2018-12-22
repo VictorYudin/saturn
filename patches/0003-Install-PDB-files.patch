@@ -22,7 +22,7 @@ index 761bcf6d..02d88ddf 100644
 +        DESTINATION ${libInstallPrefix}
 +        OPTIONAL
 +    )
-     
+ 
      if(NOT "${PXR_PREFIX}" STREQUAL "")
          if(args_PRECOMPILED_HEADERS)
 @@ -1291,6 +1297,12 @@ function(_pxr_library NAME)

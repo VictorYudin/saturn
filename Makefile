@@ -182,7 +182,7 @@ $(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v18.11,git://github.com/PixarAnimationStudios/USD.git))
+$(eval $(call GIT_DOWNLOAD,usd,v19.01,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call GIT_DOWNLOAD,x264,master,http://git.videolan.org/git/x264.git))
 $(eval $(call PYPI_INSTALL,PyOpenGL,3.1.1,https://files.pythonhosted.org/packages/9c/1d/4544708aaa89f26c97cc09450bb333a23724a320923e74d73e028b3560f9/PyOpenGL-3.1.0.tar.gz))
@@ -1403,9 +1403,6 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	( test ! $(USE_STATIC_BOOST) == ON || echo USD: Dont skip plugins when building static libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
-	echo USD: Patching for OSL support on Windows... && \
-	( test ! $(CURRENT_OS) == windows || printf "/DiscoveryTypes/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
-	( test ! $(CURRENT_OS) == windows || printf "/SourceType/-a\nSDROSL_API\n.\nw\nq" | ed -s pxr/usd/plugin/sdrOsl/oslParser.h ) && \
 	echo USD: Removing dependencies on boost_python... && \
 	( test ! $(USE_STATIC_BOOST) == ON || for f in $(USD_CMAKELISTS_WITH_BOOST); do ( printf "/Boost_PYTHON_LIBRARY/d\nw\nq" | ed -s $$f ); done ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/WHOLEARCHIVE/a\n\044{Boost_PYTHON_LIBRARY}\n-WHOLEARCHIVE:\044{Boost_PYTHON_LIBRARY}\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
