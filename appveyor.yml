@@ -34,10 +34,10 @@ install:
     - cmd: usr\bin\bison.exe --version
 
     # nasm
-    - cmd: curl https://fossies.org/windows/misc/nasm-2.14-win64.zip -o nasm.zip
+    - cmd: curl https://www.nasm.us/pub/nasm/releasebuilds/2.14.01/win64/nasm-2.14.01-win64.zip -o nasm.zip
     - cmd: usr\bin\unzip -q nasm.zip
-    - cmd: chmod -R u+x nasm-2.14/nasm.exe
-    - cmd: nasm-2.14\nasm.exe --version
+    - cmd: chmod -R u+x nasm-2.14.01/nasm.exe
+    - cmd: nasm-2.14.01\nasm.exe --version
 
     # jom
     - cmd: curl --tlsv1.2 -o jom.tar.xz -L https://github.com/VictorYudin/saturn-jom/releases/download/1.0.5/jom-v1.1.2.tar.xz
@@ -52,7 +52,7 @@ install:
     - cmd: tar -xf llvm.tar.xz
 
     # Put them to PATH
-    - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.14;C:\projects\saturn\jom\bin;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0
+    - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.14.01;C:\projects\saturn\jom\bin;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0
 
     # MSVC environment
     - cmd: '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
