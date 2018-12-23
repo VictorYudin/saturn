@@ -1493,7 +1493,7 @@ $(x264_VERSION_FILE) : $(x264_FILE)/HEAD
 
 
 # libz
-$(zlib_VERSION_FILE) : $(zlib_FILE)/HEAD
+$(zlib_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_FILE)/HEAD
 ifeq "$(CURRENT_OS)" "windows"
 	@echo Building zlib $(zlib_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
