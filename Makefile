@@ -1509,12 +1509,12 @@ ifeq "$(CURRENT_OS)" "windows"
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DCMAKE_INSTALL_PREFIX="$(zlib_PREFIX)" \
-		. > $(ABSOLUTE_PREFIX_ROOT)/log_zlib.txt 2>&1 && \
+		. && \
 	$(CMAKE) \
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) \
-		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_zlib.txt 2>&1 && \
+		$(CMAKE_MAKE_FLAGS) && \
 	cd $(THIS_DIR) && \
 	echo $(zlib_VERSION) > $@
 else
