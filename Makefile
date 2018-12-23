@@ -222,7 +222,7 @@ else
 	DYNAMICLIB_EXT := .so
 endif
 
-CMAKE := $(NOENV) $(cmake_UNIX_PREFIX)/bin/cmake
+CMAKE := $(NOENV) $(cmake_PREFIX)/bin/cmake
 
 BOOST_LINK := static
 ifeq "$(BOOST_LINK)" "shared"
