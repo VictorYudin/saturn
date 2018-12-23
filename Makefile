@@ -222,7 +222,7 @@ else
 	DYNAMICLIB_EXT := .so
 endif
 
-CMAKE := $(NOENV) $(cmake_UNIX_PREFIX)/bin/cmake
+CMAKE := $(NOENV) $(cmake_PREFIX)/bin/cmake
 
 BOOST_LINK := static
 ifeq "$(BOOST_LINK)" "shared"
@@ -1506,6 +1506,12 @@ ifeq "$(CURRENT_OS)" "windows"
 	( printf "/add_library.zlibstatic/a\nset_target_properties(zlib PROPERTIES OUTPUT_NAME \"zlibdynamic\")\n.\nw\n" | ed -s CMakeLists.txt ) && \
 	( printf "/add_library.zlibstatic/a\nset_target_properties(zlibstatic PROPERTIES OUTPUT_NAME \"zlib\")\n.\nw\n" | ed -s CMakeLists.txt ) && \
 	( printf "/#  define Z_HAVE_UNISTD_H/d\nw\n" | ed -s zconf.h.cmakein ) && \
+	echo ls $(ABSOLUTE_PREFIX_ROOT) && \
+	ls $(ABSOLUTE_PREFIX_ROOT) && \
+	echo ls $(cmake_UNIX_PREFIX)/.. && \
+	ls $(cmake_UNIX_PREFIX)/.. && \
+	echo ls $(cmake_UNIX_PREFIX) && \
+	ls $(cmake_UNIX_PREFIX) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DCMAKE_INSTALL_PREFIX="$(zlib_PREFIX)" \
