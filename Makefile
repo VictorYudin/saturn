@@ -168,6 +168,7 @@ $(eval $(call CURL_DOWNLOAD,png,1.6.34,https://sourceforge.net/projects/libpng/f
 $(eval $(call CURL_DOWNLOAD,tbb,2017_20161128oss,https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb$$(tbb_VERSION)_src.tgz))
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
+$(eval $(call GIT_DOWNLOAD,cppzmq,v4.3.0,git://github.com/zeromq/cppzmq.git))
 $(eval $(call GIT_DOWNLOAD,embree,v2.17.1,git://github.com/embree/embree.git))
 $(eval $(call GIT_DOWNLOAD,ffmpeg,n4.1,git://github.com/FFmpeg/FFmpeg.git))
 $(eval $(call GIT_DOWNLOAD,glfw,3.2.1,git://github.com/glfw/glfw.git))
@@ -183,8 +184,9 @@ $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-s
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
 $(eval $(call GIT_DOWNLOAD,usd,v19.01,git://github.com/PixarAnimationStudios/USD.git))
-$(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call GIT_DOWNLOAD,x264,master,http://git.videolan.org/git/x264.git))
+$(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
+$(eval $(call GIT_DOWNLOAD,zmq,v4.3.0,git://github.com/zeromq/libzmq.git))
 $(eval $(call PYPI_INSTALL,PyOpenGL,3.1.1,https://files.pythonhosted.org/packages/9c/1d/4544708aaa89f26c97cc09450bb333a23724a320923e74d73e028b3560f9/PyOpenGL-3.1.0.tar.gz))
 $(eval $(call QT_DOWNLOAD,qt5creator,v4.5.1,git://github.com/qt-creator/qt-creator.git,qt5base))
 $(eval $(call QT_DOWNLOAD,qt5declarative,${QT_VERSION},git://github.com/qt/qtdeclarative.git,qt5base))
@@ -386,6 +388,34 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(hdf5_VER
 		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_alembic.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(alembic_VERSION) > $@
+
+
+# libzmq
+$(cppzmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_VERSION_FILE) $(cppzmq_FILE)/HEAD
+	@echo Building cppzmq $(cppzmq_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(cppzmq_FILE))) && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(cppzmq_FILE))" $(notdir $(basename $(cppzmq_FILE))) && \
+	cd $(notdir $(basename $(cppzmq_FILE))) && \
+	git checkout -q $(cppzmq_VERSION) && \
+	( printf 'g/libzmq /s/libzmq /libzmq-static /g\nw\n' | ed -s CMakeLists.txt ) && \
+	( printf '/libzmq)/s/libzmq)/libzmq-static)/\nw\n' | ed -s CMakeLists.txt ) && \
+	mkdir -p build && cd build && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DCMAKE_INSTALL_PREFIX="$(cppzmq_PREFIX)" \
+		-DCPPZMQ_BUILD_TESTS=OFF \
+		-DENABLE_DRAFTS=OFF \
+		-DZeroMQ_DIR="$(zmq_PREFIX)/CMake" \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_cppzmq.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_cppzmq.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(cppzmq_VERSION) > $@
+
 
 $(cmake_VERSION_FILE) : $(cmake_FILE)
 ifeq "$(CURRENT_OS)" "windows"
@@ -1538,3 +1568,28 @@ else
 	echo $(zlib_VERSION) > $@
 endif
 
+# libzmq
+$(zmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_FILE)/HEAD
+	@echo Building zmq $(zmq_VERSION) && \
+	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
+	rm -rf $(notdir $(basename $(zmq_FILE))) && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(zmq_FILE))" $(notdir $(basename $(zmq_FILE))) && \
+	cd $(notdir $(basename $(zmq_FILE))) && \
+	git checkout -q $(zmq_VERSION) && \
+	( printf 'g/libzmq /s/libzmq /libzmq-static /g\nw\n' | ed -s builds/cmake/ZeroMQConfig.cmake.in ) && \
+	mkdir -p build && cd build && \
+	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
+	$(CMAKE) \
+		$(COMMON_CMAKE_FLAGS) \
+		-DBUILD_SHARED=OFF \
+		-DCMAKE_INSTALL_PREFIX="$(zmq_PREFIX)" \
+		-DWITH_DOC=OFF \
+		-DBUILD_TESTS=OFF \
+		-G "NMake Makefiles" \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_zmq.txt 2>&1 && \
+	$(CMAKE) \
+		--build . \
+		--target install \
+		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_zmq.txt 2>&1 && \
+	cd $(THIS_DIR) && \
+	echo $(zmq_VERSION) > $@
