@@ -390,7 +390,12 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(hdf5_VER
 	echo $(alembic_VERSION) > $@
 
 
-# libzmq
+# cppzmq
+ifeq "$(CURRENT_OS)" "windows"
+CPPZMQ_PLATFORM_FLAGS := -DZeroMQ_DIR="$(zmq_PREFIX)/CMake"
+else
+CPPZMQ_PLATFORM_FLAGS := -DZeroMQ_DIR="$(zmq_PREFIX)/share/cmake/ZeroMQ"
+endif
 $(cppzmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_VERSION_FILE) $(cppzmq_FILE)/HEAD
 	@echo Building cppzmq $(cppzmq_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -407,7 +412,7 @@ $(cppzmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_VERSION_FILE) $(cppzmq_FILE
 		-DCMAKE_INSTALL_PREFIX="$(cppzmq_PREFIX)" \
 		-DCPPZMQ_BUILD_TESTS=OFF \
 		-DENABLE_DRAFTS=OFF \
-		-DZeroMQ_DIR="$(zmq_PREFIX)/CMake" \
+		$(CPPZMQ_PLATFORM_FLAGS) \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_cppzmq.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
@@ -528,6 +533,11 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 	echo $(embree_VERSION) > $@
 
 
+ifeq "$(CURRENT_OS)" "windows"
+FFMPEG_PLATFORM_FLAGS := --enable-d3d11va --enable-dxva2 --target-os=win64 --toolchain=msvc
+else
+FFMPEG_PLATFORM_FLAGS :=
+endif
 $(ffmpeg_VERSION_FILE) : $(x264_VERSION_FILE) $(zlib_VERSION_FILE) $(ffmpeg_FILE)/HEAD
 	@echo Building ffmpeg $(ffmpeg_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -539,19 +549,16 @@ $(ffmpeg_VERSION_FILE) : $(x264_VERSION_FILE) $(zlib_VERSION_FILE) $(ffmpeg_FILE
 	git checkout -qf $(ffmpeg_VERSION) && \
 	./configure --help > $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
 	echo Configure... >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
-	env PKG_CONFIG_PATH=$(x264_UNIX_PREFIX)/lib/pkgconfig:$(zlib_UNIX_PREFIX)/share/pkgconfig \
+	env PKG_CONFIG_PATH=$(x264_UNIX_PREFIX)/lib/pkgconfig:$(zlib_UNIX_PREFIX)/share/pkgconfig:$(zlib_UNIX_PREFIX)/lib/pkgconfig \
 	./configure \
 		--arch=x86_64 \
 		--enable-avisynth \
-		--enable-d3d11va \
-		--enable-dxva2 \
 		--enable-gpl \
 		--enable-libx264 \
 		--enable-version3 \
 		--enable-zlib \
 		--prefix=$(ffmpeg_UNIX_PREFIX) \
-		--target-os=win64 \
-		--toolchain=msvc >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
+		$(FFMPEG_PLATFORM_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
 	echo Make... >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
 	make -j$(JOB_COUNT) >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
 	echo Install... >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
@@ -1502,6 +1509,11 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	echo $(usd_VERSION) > $@
 
 
+ifeq "$(CURRENT_OS)" "windows"
+X264_PLATFORM_ENV := env CC=cl
+else
+X264_PLATFORM_ENV :=
+endif
 $(x264_VERSION_FILE) : $(x264_FILE)/HEAD
 	@echo Building x264 $(x264_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -1511,12 +1523,12 @@ $(x264_VERSION_FILE) : $(x264_FILE)/HEAD
 	git config core.eol lf && \
 	git config core.autocrlf input && \
 	git checkout -q $(x264_VERSION) && \
-	env CC=cl \
+	$(X264_PLATFORM_ENV) \
 	./configure \
 		--enable-static \
 		--prefix=$(x264_UNIX_PREFIX) > $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
 	make -j$(JOB_COUNT) >> $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
-	( printf '/cygdrive/s/\/cygdrive\/c/c:/\nw\n' | ed -s x264.pc ) && \
+	( test ! $(CURRENT_OS) == windows || printf '/cygdrive/s/\/cygdrive\/c/c:/\nw\n' | ed -s x264.pc ) && \
 	make install >> $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(x264_VERSION) > $@
@@ -1569,6 +1581,11 @@ else
 endif
 
 # libzmq
+ifeq "$(CURRENT_OS)" "windows"
+ZMQ_PLATFORM_FLAGS := -G "NMake Makefiles"
+else
+ZMG_PLATFORM_FLAGS :=
+endif
 $(zmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_FILE)/HEAD
 	@echo Building zmq $(zmq_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -1585,7 +1602,7 @@ $(zmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_FILE)/HEAD
 		-DCMAKE_INSTALL_PREFIX="$(zmq_PREFIX)" \
 		-DWITH_DOC=OFF \
 		-DBUILD_TESTS=OFF \
-		-G "NMake Makefiles" \
+		$(ZMQ_PLATFORM_FLAGS) \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_zmq.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
