@@ -252,11 +252,11 @@ else
 endif
 
 ifeq "$(CURRENT_OS)" "windows"
-	ifeq "$(MAKE_MODE)" "debug"
-		FLAGS := /$(CRT_FLAG)d
-	else
-		FLAGS := /$(CRT_FLAG)
-	endif
+ifeq "$(MAKE_MODE)" "debug"
+	FLAGS := /$(CRT_FLAG)d
+else
+	FLAGS := /$(CRT_FLAG)
+endif
 else
 	FLAGS := -fPIC
 	MAKE_FLAGS := -j$(JOB_COUNT)
@@ -534,9 +534,12 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 
 
 ifeq "$(CURRENT_OS)" "windows"
-FFMPEG_PLATFORM_FLAGS := --enable-d3d11va --enable-dxva2 --target-os=win64 --toolchain=msvc
+FFMPEG_PLATFORM_FLAGS := --enable-d3d11va --enable-dxva2 --target-os=win64 --toolchain=msvc --extra-ldflags="/NODEFAULTLIB:libcmt"
 else
 FFMPEG_PLATFORM_FLAGS :=
+endif
+ifeq "$(MAKE_MODE)" "debug"
+FFMPEG_PLATFORM_FLAGS += --enable-debug
 endif
 $(ffmpeg_VERSION_FILE) : $(x264_VERSION_FILE) $(zlib_VERSION_FILE) $(ffmpeg_FILE)/HEAD
 	@echo Building ffmpeg $(ffmpeg_VERSION) && \
@@ -557,6 +560,7 @@ $(ffmpeg_VERSION_FILE) : $(x264_VERSION_FILE) $(zlib_VERSION_FILE) $(ffmpeg_FILE
 		--enable-libx264 \
 		--enable-version3 \
 		--enable-zlib \
+		--extra-cflags="$(FLAGS)" \
 		--prefix=$(ffmpeg_UNIX_PREFIX) \
 		$(FFMPEG_PLATFORM_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
 	echo Make... >> $(ABSOLUTE_PREFIX_ROOT)/log_ffmpeg.txt 2>&1 && \
@@ -1514,6 +1518,9 @@ X264_PLATFORM_ENV := env CC=cl
 else
 X264_PLATFORM_ENV :=
 endif
+ifeq "$(MAKE_MODE)" "debug"
+X264_PLATFORM_FLAGS := --enable-debug
+endif
 $(x264_VERSION_FILE) : $(x264_FILE)/HEAD
 	@echo Building x264 $(x264_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
@@ -1526,7 +1533,9 @@ $(x264_VERSION_FILE) : $(x264_FILE)/HEAD
 	$(X264_PLATFORM_ENV) \
 	./configure \
 		--enable-static \
-		--prefix=$(x264_UNIX_PREFIX) > $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
+		--extra-cflags="$(FLAGS)" \
+		--prefix=$(x264_UNIX_PREFIX) \
+		$(X264_PLATFORM_FLAGS) > $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
 	make -j$(JOB_COUNT) >> $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
 	( test ! $(CURRENT_OS) == windows || printf '/cygdrive/s/\/cygdrive\/c/c:/\nw\n' | ed -s x264.pc ) && \
 	make install >> $(ABSOLUTE_PREFIX_ROOT)/log_x264.txt 2>&1 && \
