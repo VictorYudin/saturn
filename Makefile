@@ -1506,9 +1506,13 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) \
 		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
-	( test ! $(USE_STATIC_BOOST) == OFF || echo Including boost shared libraries... ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || echo USD: Including boost shared libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == windows || cmd /C copy $(subst /,\\,$(boost_PREFIX)/lib/*.dll) $(subst /,\\,$(usd_PREFIX)/lib) ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == linux || cp $(boost_PREFIX)/lib/*$(DYNAMICLIB_EXT) $(usd_PREFIX)/lib ) && \
+	( test ! $(USE_STATIC_BOOST) == OFF || echo USD: Including Maya mod file... ) && \
+	( test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.mod) $(subst /,\\,$(usd_PREFIX)/third_party/maya) ) && \
+	( test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.cmd) $(subst /,\\,$(usd_PREFIX)) ) && \
+	( test ! $(CURRENT_OS) == linux || 'cp' -r $(THIS_DIR)/patches/usd.mod $(usd_PREFIX)/third_party/maya ) && \
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 

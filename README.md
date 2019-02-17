@@ -23,9 +23,11 @@ recipes for building lots of VFX (and other) libraries:
 * ilmbase
 * jpeg
 * libpng
+* materialx
 * oiio
 * openexr
 * opensubdiv
+* osl
 * png
 * ptex
 * tbb
@@ -45,3 +47,32 @@ The script works on CentOS 7. It requires the following packages.
 sudo yum group install "Development Tools"
 sudo yum install -y nasm ed python-devel mesa-libGL-devel mesa-libGLES-devel mesa-libEGL-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel mesa-libGLU-devel
 ```
+
+## The environment for USD
+
+### Maya
+
+You need to add the path to the Maya plugin to the following environment
+variable:
+
+MAYA_MODULE_PATH | c:\usd\third_party\maya
+
+### usdview
+
+USD requires setting multiple environment variables. Saturn adds a windows
+script that sets the required environment:
+
+```
+c:\usd\usd.cmd usdview c:\kitchen_set\Kitchen_set.usd
+```
+
+#### Python requirements
+
+`usdview` requires [Python 2.7](https://www.python.org/downloads/) and several
+preinstalled python packages. After installing Python, you can install the
+packages with the following command:
+
+```
+c:\usd\usd.cmd python -m pip install PySide PyOpenGL Jinja2
+```
+
