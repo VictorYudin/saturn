@@ -1484,7 +1484,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 		-DOSL_LOCATION="$(osl_PREFIX)" \
 		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
 		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=OFF \
-		-DPXR_BUILD_EMBREE_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
+		-DPXR_BUILD_EMBREE_PLUGIN:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_MATERIALX_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_MAYA_PLUGIN:BOOL=$(BUILD_USD_MAYA_PLUGIN) \
@@ -1510,9 +1510,9 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == windows || cmd /C copy $(subst /,\\,$(boost_PREFIX)/lib/*.dll) $(subst /,\\,$(usd_PREFIX)/lib) ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == linux || cp $(boost_PREFIX)/lib/*$(DYNAMICLIB_EXT) $(usd_PREFIX)/lib ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || echo USD: Including Maya mod file... ) && \
-	( test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.mod) $(subst /,\\,$(usd_PREFIX)/third_party/maya) ) && \
+	( test ! $(BUILD_USD_MAYA_PLUGIN) == ON || test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.mod) $(subst /,\\,$(usd_PREFIX)/third_party/maya) ) && \
 	( test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.cmd) $(subst /,\\,$(usd_PREFIX)) ) && \
-	( test ! $(CURRENT_OS) == linux || 'cp' -r $(THIS_DIR)/patches/usd.mod $(usd_PREFIX)/third_party/maya ) && \
+	( test ! $(BUILD_USD_MAYA_PLUGIN) == ON || test ! $(CURRENT_OS) == linux || 'cp' -r $(THIS_DIR)/patches/usd.mod $(usd_PREFIX)/third_party/maya ) && \
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 
