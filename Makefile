@@ -167,7 +167,7 @@ $(eval $(call CURL_DOWNLOAD,perl,5.26.1,http://www.cpan.org/src/5.0/perl-$$(perl
 $(eval $(call CURL_DOWNLOAD,png,1.6.34,https://sourceforge.net/projects/libpng/files/libpng16/$$(png_VERSION)/libpng-$$(png_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,tbb,2017_20161128oss,https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb$$(tbb_VERSION)_src.tgz))
 $(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
-$(eval $(call GIT_DOWNLOAD,alembic,1.7.1,git://github.com/alembic/alembic.git))
+$(eval $(call GIT_DOWNLOAD,alembic,1.7.10,git://github.com/alembic/alembic.git))
 $(eval $(call GIT_DOWNLOAD,cppzmq,v4.3.0,git://github.com/zeromq/cppzmq.git))
 $(eval $(call GIT_DOWNLOAD,embree,v2.17.1,git://github.com/embree/embree.git))
 $(eval $(call GIT_DOWNLOAD,ffmpeg,n4.1,git://github.com/FFmpeg/FFmpeg.git))
@@ -353,19 +353,18 @@ $(boost_VERSION_FILE) : $(boost_FILE)
 	cd $(THIS_DIR) && \
 	echo $(BOOST_VERSION) > $@
 
-$(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(hdf5_VERSION_FILE) $(ilmbase_VERSION_FILE) $(openexr_VERSION_FILE) $(zlib_VERSION_FILE) $(alembic_FILE)/HEAD
+$(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(openexr_VERSION_FILE) $(zlib_VERSION_FILE) $(alembic_FILE)/HEAD
 	@echo Building Alembic $(alembic_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
-	rm -rf alembic && \
-	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/alembic.git" alembic && \
-	cd alembic && \
+	rm -rf $(notdir $(basename $(alembic_FILE))) && \
+	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(alembic_FILE))" $(notdir $(basename $(alembic_FILE))) && \
+	cd $(notdir $(basename $(alembic_FILE))) && \
 	git checkout -q $(alembic_VERSION) && \
 	( printf '/Werror/d\nw\nq' | ed -s CMakeLists.txt ) && \
 	( printf "/INSTALL/a\nFoundation.h\n.\nw\nq" | ed -s lib/Alembic/AbcCoreLayer/CMakeLists.txt ) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
-		-DHDF5_ROOT="$(hdf5_PREFIX)" \
 		-DALEMBIC_ILMBASE_LINK_STATIC:BOOL=ON \
 		-DALEMBIC_LIB_USES_BOOST:BOOL=ON \
 		-DALEMBIC_SHARED_LIBS:BOOL=OFF \
@@ -375,10 +374,9 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(hdf5_VER
 		-DCMAKE_INSTALL_PREFIX="$(alembic_PREFIX)" \
 		-DILMBASE_ROOT="$(ilmbase_PREFIX)" \
 		-DUSE_BOOSTREGEX:BOOL=ON \
-		-DUSE_HDF5:BOOL=ON \
+		-DUSE_HDF5:BOOL=OFF \
 		-DUSE_MAYA:BOOL=OFF \
 		-DUSE_STATIC_BOOST:BOOL=$(USE_STATIC_BOOST) \
-		-DUSE_STATIC_HDF5:BOOL=ON \
 		-DUSE_TESTS:BOOL=OFF \
 		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
 		. > $(ABSOLUTE_PREFIX_ROOT)/log_alembic.txt 2>&1 && \
@@ -852,7 +850,7 @@ PNG_LIBRARY := $(png_PREFIX)/lib/libpng16_static$(STATICLIB_EXT)
 else
 PNG_LIBRARY := $(png_PREFIX)/lib/libpng16$(STATICLIB_EXT)
 endif
-$(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VERSION_FILE) $(ilmbase_VERSION_FILE) $(jpeg_VERSION_FILE) $(openexr_VERSION_FILE) $(png_VERSION_FILE) $(tiff_VERSION_FILE) $(zlib_VERSION_FILE) $(oiio_FILE)/HEAD
+$(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VERSION_FILE) $(ilmbase_VERSION_FILE) $(jpeg_VERSION_FILE) $(openexr_VERSION_FILE) $(png_VERSION_FILE) $(ptex_VERSION_FILE) $(tiff_VERSION_FILE) $(zlib_VERSION_FILE) $(oiio_FILE)/HEAD
 	@echo Building OpenImageIO $(oiio_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf oiio && \
@@ -865,6 +863,7 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s src/cmake/compiler.cmake ) && \
 	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s src/cmake/compiler.cmake ) && \
 	( printf '/Boost_USE_STATIC_LIBS/d\nw\nq' | ed -s src/cmake/externalpackages.cmake ) && \
+	( printf '/USE_PYTHON OFF/d\nw\n' | ed -s src/cmake/compiler.cmake ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	$(CMAKE) \
@@ -882,6 +881,8 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 		-DOPENEXR_HOME="$(openexr_PREFIX)" \
 		-DPNG_LIBRARY="$(PNG_LIBRARY)" \
 		-DPNG_PNG_INCLUDE_DIR="$(png_PREFIX)/include" \
+		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
+		-DPYTHON_EXECUTABLE=$(PYTHON_BIN) \
 		-DSTOP_ON_WARNING:BOOL=OFF \
 		-DTIFF_INCLUDE_DIR="$(tiff_PREFIX)/include" \
 		-DTIFF_LIBRARY="$(tiff_PREFIX)/lib/libtiff$(STATICLIB_EXT)" \
@@ -889,7 +890,6 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 		-DUSE_GIF:BOOL=OFF \
 		-DUSE_JPEGTURBO:BOOL=ON \
 		-DUSE_NUKE:BOOL=OFF \
-		-DUSE_PYTHON:BOOL=OFF \
 		-DUSE_QT:BOOL=OFF \
 		-DVERBOSE:BOOL=ON \
 		-DZLIB_ROOT="$(zlib_PREFIX)" \
@@ -1415,7 +1415,7 @@ USD_STATIC_LIBS += \
 	"$(boost_PREFIX)/lib/$(BOOST_LIB_PREFIX)$(BOOST_NAMESPACE)_python$(BOOST_LIB_EXT)"
 endif
 
-$(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
+$(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(embree_VERSION_FILE) $(ilmbase_VERSION_FILE) $(materialx_VERSION_FILE) $(oiio_VERSION_FILE) $(openexr_VERSION_FILE) $(opensubd_VERSION_FILE) $(osl_VERSION_FILE) $(ptex_VERSION_FILE) $(pyside_VERSION_FILE) $(tbb_VERSION_FILE) $(usd_FILE)/HEAD
 	@echo Building usd $(usd_VERSION) shared:$(USD_BUILD_SHARED_LIBS) monolithic:$(PXR_BUILD_MONOLITHIC) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(usd_FILE))) && \
@@ -1459,6 +1459,12 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/pxrTargets/d\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
 	echo USD: Using static embree... && \
 	( printf "/libembree.so/s/so/a/\nw\nq" | ed -s cmake/modules/FindEmbree.cmake ) && \
+	echo USD: Alembic 1.7.10 support... && \
+	( printf "/AbcCoreOgawa..ReadArchive/s/()/(), true/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
+	( test 1 || echo USD: Support for UVs when importing Alembic to Maya... ) && \
+	( test 1 || printf "/TexCoord2fArray/s/TexCoord2fArray/Float2Array/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
+	( test 1 || printf "/USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY/s/false/true/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
+	( test 1 || printf "/property.sampleTimes.GetSize()/s/0/1/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/pyside/bin:$$PATH && \
@@ -1483,7 +1489,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 		-DOPENSUBDIV_ROOT_DIR:PATH="$(opensubd_PREFIX)" \
 		-DOSL_LOCATION="$(osl_PREFIX)" \
 		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
-		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=OFF \
+		-DPXR_BUILD_ALEMBIC_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_EMBREE_PLUGIN:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_BUILD_MATERIALX_PLUGIN:BOOL=ON \
@@ -1492,6 +1498,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(boost_VERSION_FILE) $(cmake_VER
 		-DPXR_BUILD_OPENIMAGEIO_PLUGIN:BOOL=ON \
 		-DPXR_BUILD_TESTS:BOOL=OFF \
 		-DPXR_BUILD_USD_IMAGING:BOOL=$(PXR_BUILD_IMAGING) \
+		-DPXR_ENABLE_HDF5_SUPPORT:BOOL=OFF \
 		-DPXR_ENABLE_OSL_SUPPORT:BOOL=ON \
 		-DPXR_ENABLE_PYTHON_SUPPORT:BOOL=$(PXR_BUILD_IMAGING) \
 		-DPXR_LIB_PREFIX="" \
