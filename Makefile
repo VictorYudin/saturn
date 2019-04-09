@@ -1,6 +1,6 @@
 # Copyright (C) 2017 Victor Yudin - All Rights Reserved
 #
-# This is the Windows build recipe for Pixar USD and its dependencies.
+# This is the build recipe for Pixar USD and its dependencies.
 #
 # ..\..\..\lib\cmake\bin\cmake.exe --build . --target install --config Debug
 # set PATH=C:\Temp\saturn-build\jom\bin;%PATH%
@@ -137,13 +137,12 @@ $$($(1)_VERSION_FILE) : $$($(4)_VERSION_FILE) $$($(1)_FILE)/HEAD
 	git checkout -q $$($(1)_VERSION) && \
 	export PATH=$$(ABSOLUTE_PREFIX_ROOT)/perl/bin:$$(PYTHON_ABSOLUTE):$$$$PATH && \
 	$$(ABSOLUTE_PREFIX_ROOT)/qt5base/bin/qmake > $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
-	$$(NMAKE) >> $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
+	$$(NMAKE) $$(MAKE_FLAGS) >> $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
 	$$(NMAKE) install >> $$(ABSOLUTE_PREFIX_ROOT)/log_$(1).txt 2>&1 && \
 	cd $$(THIS_DIR) && \
 	echo $$($(1)_VERSION) > $$@
 endef
 
-QT_VERSION := v5.12.0-beta4
 QT_VERSION := v5.11.2
 
 ifeq "$(CURRENT_OS)" "windows"
@@ -153,20 +152,20 @@ $(eval $(call CURL_DOWNLOAD,cmake,3.9.1,https://cmake.org/files/v$$(word 1,$$(su
 endif
 
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
-$(eval $(call CURL_DOWNLOAD,cfe,5.0.0,http://releases.llvm.org/$$(cfe_VERSION)/cfe-$$(cfe_VERSION).src.tar.xz))
-$(eval $(call CURL_DOWNLOAD,clangtoolsextra,5.0.0,http://releases.llvm.org/$$(clangtoolsextra_VERSION)/clang-tools-extra-$$(clangtoolsextra_VERSION).src.tar.xz))
-$(eval $(call CURL_DOWNLOAD,compilerrt,5.0.0,http://releases.llvm.org/$$(compilerrt_VERSION)/compiler-rt-$$(compilerrt_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,cfe,8.0.0,http://releases.llvm.org/$$(cfe_VERSION)/cfe-$$(cfe_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,clangtoolsextra,8.0.0,http://releases.llvm.org/$$(clangtoolsextra_VERSION)/clang-tools-extra-$$(clangtoolsextra_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,compilerrt,8.0.0,http://releases.llvm.org/$$(compilerrt_VERSION)/compiler-rt-$$(compilerrt_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,freetype,2.8,http://download.savannah.gnu.org/releases/freetype/freetype-$$(freetype_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,glew,2.0.0,https://sourceforge.net/projects/glew/files/glew/$$(glew_VERSION)/glew-$$(glew_VERSION).tgz))
 $(eval $(call CURL_DOWNLOAD,glut,3.0.0,https://sourceforge.net/projects/freeglut/files/freeglut/$$(glut_VERSION)/freeglut-$$(glut_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$$(word 1,$$(subst ., ,$$(hdf5_VERSION))).$$(word 2,$$(subst ., ,$$(hdf5_VERSION)))/hdf5-$$(hdf5_VERSION)/src/hdf5-$$(hdf5_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
-$(eval $(call CURL_DOWNLOAD,llvm,5.0.0,http://releases.llvm.org/$$(llvm_VERSION)/llvm-$$(llvm_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,llvm,8.0.0,http://releases.llvm.org/$$(llvm_VERSION)/llvm-$$(llvm_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,perl,5.26.1,http://www.cpan.org/src/5.0/perl-$$(perl_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,png,1.6.34,https://sourceforge.net/projects/libpng/files/libpng16/$$(png_VERSION)/libpng-$$(png_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,tbb,2017_20161128oss,https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb$$(tbb_VERSION)_src.tgz))
-$(eval $(call CURL_DOWNLOAD,tiff,3.8.2,http://dl.maptools.org/dl/libtiff/tiff-$$(tiff_VERSION).tar.gz))
+$(eval $(call CURL_DOWNLOAD,tiff,4.0.10,http://download.osgeo.org/libtiff/tiff-$$(tiff_VERSION).tar.gz))
 $(eval $(call GIT_DOWNLOAD,alembic,1.7.10,git://github.com/alembic/alembic.git))
 $(eval $(call GIT_DOWNLOAD,cppzmq,v4.3.0,git://github.com/zeromq/cppzmq.git))
 $(eval $(call GIT_DOWNLOAD,embree,v2.17.1,git://github.com/embree/embree.git))
@@ -176,9 +175,9 @@ $(eval $(call GIT_DOWNLOAD,jom,v1.1.2,git://github.com/qt-labs/jom.git))
 $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-turbo.git))
 $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
 $(eval $(call GIT_DOWNLOAD,materialx,v1.36.0,git://github.com/materialx/MaterialX.git))
-$(eval $(call GIT_DOWNLOAD,oiio,Release-1.8.5,git://github.com/OpenImageIO/oiio.git))
+$(eval $(call GIT_DOWNLOAD,oiio,Release-2.0.6,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
-$(eval $(call GIT_DOWNLOAD,osl,Release-1.9.9,git://github.com/imageworks/OpenShadingLanguage.git))
+$(eval $(call GIT_DOWNLOAD,osl,Release-1.10.3,git://github.com/imageworks/OpenShadingLanguage.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
@@ -383,12 +382,12 @@ $(alembic_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(ilmbase_
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_alembic.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_alembic.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(alembic_VERSION) > $@
 
-
-# cppzmq
+#cppzmq
 ifeq "$(CURRENT_OS)" "windows"
 CPPZMQ_PLATFORM_FLAGS := -DZeroMQ_DIR="$(zmq_PREFIX)/CMake"
 else
@@ -415,7 +414,8 @@ $(cppzmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_VERSION_FILE) $(cppzmq_FILE
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_cppzmq.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_cppzmq.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(cppzmq_VERSION) > $@
 
@@ -471,7 +471,8 @@ $(freetype_VERSION_FILE) : $(cmake_VERSION_FILE) $(freetype_FILE)
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_freetype.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_freetype.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(freetype_VERSION) > $@
 
@@ -524,7 +525,8 @@ $(embree_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_VERSION_FILE) $(tbb_VERSIO
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_embree.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_embree.txt 2>&1 && \
 	( test ! $(CURRENT_OS) == windows || for i in embree_sse42 embree_avx embree_avx2 simd tasking lexers sys math; do cmd /C copy $$i$(STATICLIB_EXT) $(subst /,\\,$(embree_PREFIX)/lib); done ) && \
 	( test ! $(CURRENT_OS) == linux || for i in embree_sse42 embree_avx embree_avx2 simd tasking lexers sys math; do cp lib$$i$(STATICLIB_EXT) $(embree_PREFIX)/lib; done ) && \
 	cd $(THIS_DIR) && \
@@ -592,7 +594,8 @@ $(glew_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_FILE)
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glew.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_glew.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(glew_VERSION) > $@
 
@@ -615,7 +618,8 @@ $(glfw_VERSION_FILE) : $(cmake_VERSION_FILE) $(glfw_FILE)/HEAD
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glfw.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_glfw.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(glfw_VERSION) > $@
 
@@ -640,7 +644,8 @@ $(glut_VERSION_FILE) : $(cmake_VERSION_FILE) $(glut_FILE)
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_glut.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_glut.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(glut_VERSION) > $@
 
@@ -670,7 +675,8 @@ $(hdf5_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(hdf5_FILE)
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_hdf5.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_hdf5.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(hdf5_VERSION) > $@
 
@@ -693,7 +699,8 @@ $(jom_VERSION_FILE) : $(cmake_VERSION_FILE) $(qt5base_VERSION_FILE) $(jom_FILE)/
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_jom.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_jom.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(jom_VERSION) > $@
 
@@ -757,7 +764,8 @@ $(jsoncpp_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(jsoncpp_F
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_jsoncpp.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_jsoncpp.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(jsoncpp_VERSION) > $@
 
@@ -778,7 +786,8 @@ $(materialx_VERSION_FILE) : $(cmake_VERSION_FILE) $(materialx_FILE)/HEAD
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_materialx.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_materialx.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(materialx_VERSION) > $@
 
@@ -799,7 +808,8 @@ $(ilmbase_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_FILE)
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_ilmbase.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_ilmbase.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(ilmbase_VERSION) > $@
 
@@ -828,7 +838,8 @@ $(llvm_VERSION_FILE) : $(llvm_FILE) $(cfe_FILE) $(clangtoolsextra_FILE) $(cmake_
 		-DCMAKE_INSTALL_PREFIX="$(llvm_PREFIX)" \
 		-DLLVM_ENABLE_RTTI:BOOL=ON \
 		-DLLVM_REQUIRES_RTTI:BOOL=ON \
-		-DLLVM_TARGETS_TO_BUILD:STRING=X86 \
+		-DLLVM_TARGETS_TO_BUILD:STRING="X86;NVPTX" \
+		-DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN:BOOL=ON \
 		-DPYTHON_EXECUTABLE:STRING="$(PYTHON_BIN)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_llvm.txt 2>&1 && \
 	$(CMAKE) \
@@ -874,11 +885,11 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 		-DCMAKE_INSTALL_PREFIX="$(oiio_PREFIX)" \
 		-DFREETYPE_INCLUDE_PATH="$(freetype_PREFIX)/include/freetype2" \
 		-DFREETYPE_PATH="$(freetype_PREFIX)" \
-		-DILMBASE_HOME="$(ilmbase_PREFIX)" \
+		-DILMBASE_ROOT_DIR="$(ilmbase_PREFIX)" \
 		-DJPEGTURBO_PATH="$(jpeg_PREFIX)" \
 		-DLINKSTATIC:BOOL=ON \
 		-DOIIO_BUILD_TESTS:BOOL=OFF \
-		-DOPENEXR_HOME="$(openexr_PREFIX)" \
+		-DOPENEXR_ROOT_DIR="$(openexr_PREFIX)" \
 		-DPNG_LIBRARY="$(PNG_LIBRARY)" \
 		-DPNG_PNG_INCLUDE_DIR="$(png_PREFIX)/include" \
 		-DPTEX_LOCATION:PATH="$(ptex_PREFIX)" \
@@ -897,7 +908,8 @@ $(oiio_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(freetype_VE
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_oiio.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(oiio_VERSION) > $@
 
@@ -925,7 +937,8 @@ $(openexr_VERSION_FILE) : $(cmake_VERSION_FILE) $(ilmbase_VERSION_FILE) $(zlib_V
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_openexr.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_openexr.txt 2>&1 && \
 	cp $(ABSOLUTE_PREFIX_ROOT)/ilmbase/lib/*$(STATICLIB_EXT) $(ABSOLUTE_PREFIX_ROOT)/openexr/lib && \
 	cd $(THIS_DIR) && \
 	echo $(openexr_VERSION) > $@
@@ -963,7 +976,8 @@ $(opensubd_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_VERSION_FILE) $(glfw_VER
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_opensubdiv.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_opensubdiv.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(opensubd_VERSION) > $@
 
@@ -976,7 +990,6 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 	cd $(notdir $(basename $(osl_FILE))) && \
 	git checkout -q $(osl_VERSION) && \
 	echo OSL: Disable OSL shaders... && \
-	( printf "/pragma once/a\n#define OSL_STATIC_BUILD\n.\nw\n" | ed -s src/include/OSL/export.h ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
 	echo OSL: Linking against static boost... && \
@@ -984,6 +997,8 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/externalpackages.cmake ) && \
 	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
 	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
+	echo OSL: Cuda 10... && \
+	( printf "/{CUDA_VERSION_MAJOR} GREATER 8)/s/GREATER 8/EQUAL 9 AND \044{CUDA_VERSION_MINOR} EQUAL 0/\nw\n" | ed -s src/cmake/externalpackages.cmake ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(PYTHON_ABSOLUTE):$(ABSOLUTE_PREFIX_ROOT)/boost/lib:$$PATH && \
@@ -993,22 +1008,29 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 		-DBUILDSTATIC:BOOL=ON \
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX="$(osl_PREFIX)" \
-		-DILMBASE_HOME="$(ilmbase_PREFIX)" \
+		-DCUDA_TARGET_ARCH=sm_52 \
+		-DCUDA_TOOLKIT_ROOT_DIR=/home/victor/usr/cuda-10.0.130 \
+		-DENABLERTTI:BOOL=ON \
+		-DILMBASE_ROOT_DIR="$(ilmbase_PREFIX)" \
 		-DLINKSTATIC:BOOL=ON \
 		-DLLVM_DIRECTORY="$(llvm_PREFIX)" \
 		-DLLVM_STATIC:BOOL=ON \
-		-DOPENEXR_HOME="$(openexr_PREFIX)" \
-		-DOPENIMAGEIOHOME="$(oiio_PREFIX)" \
+		-DOPENEXR_ROOT_DIR="$(openexr_PREFIX)" \
+		-DOPENIMAGEIO_ROOT_DIR="$(oiio_PREFIX)" \
+		-DOPTIXHOME=/home/victor/usr/NVIDIA-OptiX-SDK-6.0.0-linux64 \
 		-DOSL_BUILD_PLUGINS:BOOL=OFF \
 		-DOSL_BUILD_TESTS:BOOL=OFF \
+		-DSTOP_ON_WARNING=OFF \
+		-DUSE_OPTIX:BOOL=ON \
 		-DUSE_QT:BOOL=OFF \
-		-DUSE_SIMD=sse4.2 \
+		-DVERBOSE=ON \
 		-DZLIB_ROOT="$(zlib_PREFIX)" \
 		.. > $(ABSOLUTE_PREFIX_ROOT)/log_osl.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_osl.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_osl.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(osl_VERSION) > $@
 
@@ -1076,7 +1098,8 @@ $(png_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(png_FILE)
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_png.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_png.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(png_VERSION) > $@
 
@@ -1101,7 +1124,8 @@ $(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_ptex.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(ptex_VERSION) > $@
 
@@ -1115,8 +1139,10 @@ $(pyside_VERSION_FILE) : $(cmake_VERSION_FILE) $(llvm_VERSION_FILE) $(qt5base_VE
 	cd $(notdir $(basename $(pyside_FILE))) && \
 	git checkout -q $(pyside_VERSION) && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
-	( printf "/QSslPreSharedKeyAuthenticator/d\nw\n" | ed -s sources/pyside2/PySide2/QtNetwork/CMakeLists.txt ) && \
+	( printf "/check_qt_class.*QSslPreSharedKeyAuthenticator/d\nw\n" | ed -s sources/pyside2/PySide2/QtNetwork/CMakeLists.txt ) && \
 	( printf "/QSslPreSharedKeyAuthenticator/d\nw\n" | ed -s sources/pyside2/PySide2/QtNetwork/typesystem_network.xml ) && \
+	( test 1 || printf "/target_link_libraries.*shiboken2/a\ndl\n.\nw\n" | ed -s sources/shiboken2/generator/CMakeLists.txt ) && \
+	( test 1 || printf "/target_link_libraries.*shiboken2/a\npthread\n.\nw\n" | ed -s sources/shiboken2/generator/CMakeLists.txt ) && \
 	env LLVM_INSTALL_DIR=$(llvm_PREFIX) \
 	$(PYTHON_BIN) setup.py \
 		build \
@@ -1465,6 +1491,8 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	( test 1 || printf "/TexCoord2fArray/s/TexCoord2fArray/Float2Array/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	( test 1 || printf "/USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY/s/false/true/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	( test 1 || printf "/property.sampleTimes.GetSize()/s/0/1/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
+	echo USD: OpenImageIO 2 support... && \
+	( printf "/image->get_pixels/s/0, storage.width, 0, storage.height, 0, 1/ROI(0, storage.width, 0, storage.height)/\nw\n" | ed -s pxr/imaging/lib/glf/oiioImage.cpp ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/pyside/bin:$$PATH && \
@@ -1627,6 +1655,7 @@ $(zmq_VERSION_FILE) : $(cmake_VERSION_FILE) $(zmq_FILE)/HEAD
 	$(CMAKE) \
 		--build . \
 		--target install \
-		--config $(CMAKE_BUILD_TYPE) >> $(ABSOLUTE_PREFIX_ROOT)/log_zmq.txt 2>&1 && \
+		--config $(CMAKE_BUILD_TYPE) \
+		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_zmq.txt 2>&1 && \
 	cd $(THIS_DIR) && \
 	echo $(zmq_VERSION) > $@
