@@ -990,6 +990,7 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 	cd $(notdir $(basename $(osl_FILE))) && \
 	git checkout -q $(osl_VERSION) && \
 	echo OSL: Disable OSL shaders... && \
+	( printf "/pragma once/a\n#ifndef OSL_STATIC_BUILD\n#define OSL_STATIC_BUILD\n#endif\n.\nw\n" | ed -s src/include/OSL/export.h ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
 	( printf "/shaders/d\nw\n" | ed -s CMakeLists.txt ) && \
 	echo OSL: Linking against static boost... && \
@@ -1009,7 +1010,7 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 		-DBoost_USE_STATIC_LIBS:BOOL=$(USE_STATIC_BOOST) \
 		-DCMAKE_INSTALL_PREFIX="$(osl_PREFIX)" \
 		-DCUDA_TARGET_ARCH=sm_52 \
-		-DCUDA_TOOLKIT_ROOT_DIR=/home/victor/usr/cuda-10.0.130 \
+		-DCUDA_TOOLKIT_ROOT_DIR= \
 		-DENABLERTTI:BOOL=ON \
 		-DILMBASE_ROOT_DIR="$(ilmbase_PREFIX)" \
 		-DLINKSTATIC:BOOL=ON \
@@ -1017,11 +1018,11 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 		-DLLVM_STATIC:BOOL=ON \
 		-DOPENEXR_ROOT_DIR="$(openexr_PREFIX)" \
 		-DOPENIMAGEIO_ROOT_DIR="$(oiio_PREFIX)" \
-		-DOPTIXHOME=/home/victor/usr/NVIDIA-OptiX-SDK-6.0.0-linux64 \
+		-DOPTIXHOME= \
 		-DOSL_BUILD_PLUGINS:BOOL=OFF \
 		-DOSL_BUILD_TESTS:BOOL=OFF \
 		-DSTOP_ON_WARNING=OFF \
-		-DUSE_OPTIX:BOOL=ON \
+		-DUSE_OPTIX:BOOL=OFF \
 		-DUSE_QT:BOOL=OFF \
 		-DVERBOSE=ON \
 		-DZLIB_ROOT="$(zlib_PREFIX)" \
@@ -1293,7 +1294,7 @@ ifeq "$(CURRENT_OS)" "windows"
 	rm -rf tiff-$(tiff_VERSION) && \
 	tar -xf $(ABSOLUTE_SOURCES_ROOT)/tiff-$(tiff_VERSION).tar.gz && \
 	cd tiff-$(tiff_VERSION) && \
-	( test ! $(CRT_LINKAGE) == static || printf '/OPTFLAGS/s/MD/MT/\nw\nq' | ed -s nmake.opt ) && \
+	( test ! $(CRT_LINKAGE) == static || printf 'g/OPTFLAGS/s/MD/MT/g\nw\n' | ed -s nmake.opt ) && \
 	env -u MAKE -u MAKEFLAGS nmake /f Makefile.vc \
 		JPEG_SUPPORT=1 \
 		JPEG_INCLUDE=-I"$(jpeg_PREFIX)/include" \
