@@ -182,7 +182,7 @@ $(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v19.03,git://github.com/PixarAnimationStudios/USD.git))
+$(eval $(call GIT_DOWNLOAD,usd,v19.05,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,x264,master,http://git.videolan.org/git/x264.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call GIT_DOWNLOAD,zmq,v4.3.0,git://github.com/zeromq/libzmq.git))
@@ -1451,8 +1451,6 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	git checkout -q $(usd_VERSION) && \
 	( test ! $(CURRENT_OS) == windows || test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
 	( test ! $(CURRENT_OS) == windows || test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0002-Ability-to-use-custom-log-output.patch" ) && \
-	( test ! $(CURRENT_OS) == windows || test ! $(USE_STATIC_BOOST) == OFF || git apply "$(WINDOWS_THIS_DIR)\patches\0003-Install-PDB-files.patch" ) && \
-	( test ! $(CURRENT_OS) == windows || git apply "$(WINDOWS_THIS_DIR)\patches\0005-Fixed-maya-crash-when-exporting.patch" ) && \
 	( git apply "$(WINDOWS_THIS_DIR)/patches/0006-Bug-in-Intel-implementation-of-GL_ARB_shader_draw_pa.patch" ) && \
 	echo USD: Patching for supporting static OIIO... && \
 	( for f in $(USD_STATIC_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
