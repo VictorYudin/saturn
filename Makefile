@@ -1463,7 +1463,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	( printf "/Zc:rvalueCast/d\nd\nd\na\nset(_PXR_CXX_FLAGS \"\044{_PXR_CXX_FLAGS} /Zc:rvalueCast /Zc:strictStrings /Zc:inline\")\n.\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
 	echo USD: Patching for Maya support... && \
 	sed -i "/Program Files/d" cmake/modules/FindMaya.cmake && \
-	( printf "/find_package_handle_standard_args/\n/MAYA_EXECUTABLE/d\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
+	( printf "/find_package_handle_standard_args/\n/MAYA_EXECUTABLE/d\nd\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
 	echo USD: Cant irnore Unresolved_external_symbol_error_is_expected_Please_ignore because it always fails... && \
 	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/lib/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || echo USD: Dont skip plugins when building static libraries... ) && \
