@@ -1534,7 +1534,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 		-DTBB_LIBRARY=$(TBB_LIBRARY) \
 		-DTBB_ROOT_DIR=$(TBB_ROOT_DIR) \
 		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
-		.. && \
+		.. > $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
 	$(CMAKE) \
 		--build . \
 		--target install \
