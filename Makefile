@@ -1492,6 +1492,8 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	( test 1 || printf "/property.sampleTimes.GetSize()/s/0/1/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	echo USD: OpenImageIO 2 support... && \
 	( printf "/image->get_pixels/s/0, storage.width, 0, storage.height, 0, 1/ROI(0, storage.width, 0, storage.height)/\nw\n" | ed -s pxr/imaging/lib/glf/oiioImage.cpp ) && \
+	echo USD: Maya glGetIntegeri_v bugfix... && \
+	( printf "/uniformBufferBindings/s/_UNIFORM_BINDINGS_TO_SAVE/glGetIntegeri_v ? _UNIFORM_BINDINGS_TO_SAVE : 0/\nw\n" | ed -s third_party/maya/lib/pxrUsdMayaGL/batchRenderer.cpp ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/pyside/bin:$$PATH && \
