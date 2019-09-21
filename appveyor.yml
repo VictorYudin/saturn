@@ -48,7 +48,7 @@ install:
     - cmd: tar -xf boost.tar.xz
 
     # llvm
-    - cmd: curl --tlsv1.2 -o llvm.tar.xz -L https://github.com/VictorYudin/saturn-llvm/releases/download/1.0.4/llvm-5.0.0.tar.xz
+    - cmd: curl --tlsv1.2 -o llvm.tar.xz -L https://github.com/VictorYudin/saturn-llvm/releases/download/9.0.0/llvm-9.0.0.tar.xz
     - cmd: tar -xf llvm.tar.xz
 
     # Put them to PATH

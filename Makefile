@@ -152,15 +152,15 @@ $(eval $(call CURL_DOWNLOAD,cmake,3.9.1,https://cmake.org/files/v$$(word 1,$$(su
 endif
 
 $(eval $(call CURL_DOWNLOAD,boost,1_61_0,http://sourceforge.net/projects/boost/files/boost/$$(subst _,.,$$(boost_VERSION))/boost_$$(boost_VERSION).tar.gz))
-$(eval $(call CURL_DOWNLOAD,cfe,8.0.0,http://releases.llvm.org/$$(cfe_VERSION)/cfe-$$(cfe_VERSION).src.tar.xz))
-$(eval $(call CURL_DOWNLOAD,clangtoolsextra,8.0.0,http://releases.llvm.org/$$(clangtoolsextra_VERSION)/clang-tools-extra-$$(clangtoolsextra_VERSION).src.tar.xz))
-$(eval $(call CURL_DOWNLOAD,compilerrt,8.0.0,http://releases.llvm.org/$$(compilerrt_VERSION)/compiler-rt-$$(compilerrt_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,cfe,9.0.0,http://releases.llvm.org/$$(cfe_VERSION)/cfe-$$(cfe_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,clangtoolsextra,9.0.0,http://releases.llvm.org/$$(clangtoolsextra_VERSION)/clang-tools-extra-$$(clangtoolsextra_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,compilerrt,9.0.0,http://releases.llvm.org/$$(compilerrt_VERSION)/compiler-rt-$$(compilerrt_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,freetype,2.8,http://download.savannah.gnu.org/releases/freetype/freetype-$$(freetype_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,glew,2.0.0,https://sourceforge.net/projects/glew/files/glew/$$(glew_VERSION)/glew-$$(glew_VERSION).tgz))
 $(eval $(call CURL_DOWNLOAD,glut,3.0.0,https://sourceforge.net/projects/freeglut/files/freeglut/$$(glut_VERSION)/freeglut-$$(glut_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,hdf5,1.8.10,https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-$$(word 1,$$(subst ., ,$$(hdf5_VERSION))).$$(word 2,$$(subst ., ,$$(hdf5_VERSION)))/hdf5-$$(hdf5_VERSION)/src/hdf5-$$(hdf5_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,ilmbase,2.2.0,http://download.savannah.nongnu.org/releases/openexr/ilmbase-$$(ilmbase_VERSION).tar.gz))
-$(eval $(call CURL_DOWNLOAD,llvm,8.0.0,http://releases.llvm.org/$$(llvm_VERSION)/llvm-$$(llvm_VERSION).src.tar.xz))
+$(eval $(call CURL_DOWNLOAD,llvm,9.0.0,http://releases.llvm.org/$$(llvm_VERSION)/llvm-$$(llvm_VERSION).src.tar.xz))
 $(eval $(call CURL_DOWNLOAD,openexr,2.2.0,http://download.savannah.nongnu.org/releases/openexr/openexr-$$(openexr_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,perl,5.26.1,http://www.cpan.org/src/5.0/perl-$$(perl_VERSION).tar.gz))
 $(eval $(call CURL_DOWNLOAD,png,1.6.34,https://sourceforge.net/projects/libpng/files/libpng16/$$(png_VERSION)/libpng-$$(png_VERSION).tar.gz))
@@ -177,12 +177,12 @@ $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/js
 $(eval $(call GIT_DOWNLOAD,materialx,v1.36.0,git://github.com/materialx/MaterialX.git))
 $(eval $(call GIT_DOWNLOAD,oiio,Release-2.0.6,git://github.com/OpenImageIO/oiio.git))
 $(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
-$(eval $(call GIT_DOWNLOAD,osl,Release-1.10.3,git://github.com/imageworks/OpenShadingLanguage.git))
+$(eval $(call GIT_DOWNLOAD,osl,912633af,git://github.com/imageworks/OpenShadingLanguage.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v19.05,git://github.com/PixarAnimationStudios/USD.git))
+$(eval $(call GIT_DOWNLOAD,usd,v19.07,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,x264,master,http://git.videolan.org/git/x264.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call GIT_DOWNLOAD,zmq,v4.3.0,git://github.com/zeromq/libzmq.git))
@@ -998,8 +998,6 @@ $(osl_VERSION_FILE) : $(boost_VERSION_FILE) $(cmake_VERSION_FILE) $(llvm_VERSION
 	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/externalpackages.cmake ) && \
 	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
 	( printf "/Boost_USE_STATIC_LIBS/d\nw\n" | ed -s src/cmake/compiler.cmake ) && \
-	echo OSL: Cuda 10... && \
-	( printf "/{CUDA_VERSION_MAJOR} GREATER 8)/s/GREATER 8/EQUAL 9 AND \044{CUDA_VERSION_MINOR} EQUAL 0/\nw\n" | ed -s src/cmake/externalpackages.cmake ) && \
 	mkdir build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(PYTHON_ABSOLUTE):$(ABSOLUTE_PREFIX_ROOT)/boost/lib:$$PATH && \
@@ -1106,7 +1104,7 @@ $(png_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(png_FILE)
 
 
 # Ptex
-$(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(ptex_FILE)/HEAD
+$(ptex_VERSION_FILE) : $(cmake_VERSION_FILE) $(zlib_VERSION_FILE) $(ptex_FILE)/HEAD
 	@echo Building Ptex $(ptex_VERSION) && \
 	mkdir -p $(ABSOLUTE_BUILD_ROOT) && cd $(ABSOLUTE_BUILD_ROOT) && \
 	rm -rf $(notdir $(basename $(ptex_FILE))) && \
@@ -1484,8 +1482,6 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	( test ! $(PXR_BUILD_MONOLITHIC) == ON || printf "/pxrTargets/d\nw\n" | ed -s pxr/pxrConfig.cmake.in ) && \
 	echo USD: Using static embree... && \
 	( printf "/libembree.so/s/so/a/\nw\nq" | ed -s cmake/modules/FindEmbree.cmake ) && \
-	echo USD: Alembic 1.7.10 support... && \
-	( printf "/AbcCoreOgawa..ReadArchive/s/()/(), true/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	( test 1 || echo USD: Support for UVs when importing Alembic to Maya... ) && \
 	( test 1 || printf "/TexCoord2fArray/s/TexCoord2fArray/Float2Array/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	( test 1 || printf "/USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY/s/false/true/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
