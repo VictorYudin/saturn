@@ -57,8 +57,8 @@ install:
     # MSVC environment
     - cmd: '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
 
-    # Maya 2018 devkit
-    - cmd: curl --tlsv1.2 -o mayaDevkit.zip -L https://github.com/VictorYudin/saturn/releases/download/Maya2018Devkit/Maya2018-DEVKIT_Windows.zip
+    # Maya 2019 devkit
+    - cmd: curl --tlsv1.2 -o mayaDevkit.zip -L https://s3-us-west-2.amazonaws.com/autodesk-adn-transfer/ADN+Extranet/M%26E/Maya/devkit+2019/Autodesk_Maya_2019_DEVKIT_Windows.zip
     - cmd: usr\bin\unzip -q mayaDevkit.zip
     - cmd: rm -rf devkitBase/include/tbb
     - cmd: rm -rf devkitBase/include/python2.7
