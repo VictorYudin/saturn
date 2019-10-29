@@ -176,13 +176,13 @@ $(eval $(call GIT_DOWNLOAD,jpeg,1.5.1,git://github.com/libjpeg-turbo/libjpeg-tur
 $(eval $(call GIT_DOWNLOAD,jsoncpp,1.8.0,git://github.com/open-source-parsers/jsoncpp.git))
 $(eval $(call GIT_DOWNLOAD,materialx,v1.36.0,git://github.com/materialx/MaterialX.git))
 $(eval $(call GIT_DOWNLOAD,oiio,Release-2.0.6,git://github.com/OpenImageIO/oiio.git))
-$(eval $(call GIT_DOWNLOAD,opensubd,v3_2_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
+$(eval $(call GIT_DOWNLOAD,opensubd,v3_4_0,git://github.com/PixarAnimationStudios/OpenSubdiv.git))
 $(eval $(call GIT_DOWNLOAD,osl,912633af,git://github.com/imageworks/OpenShadingLanguage.git))
 $(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v19.07,git://github.com/PixarAnimationStudios/USD.git))
+$(eval $(call GIT_DOWNLOAD,usd,v19.11,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,x264,master,http://git.videolan.org/git/x264.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call GIT_DOWNLOAD,zmq,v4.3.0,git://github.com/zeromq/libzmq.git))
@@ -958,6 +958,7 @@ $(opensubd_VERSION_FILE) : $(cmake_VERSION_FILE) $(glew_VERSION_FILE) $(glfw_VER
 	( printf "/if.*NOT.*NOT/s/(/( 0 AND /\nw\nq" | ed -s opensubdiv/CMakeLists.txt ) && \
 	( printf "/\/WX/d\nw\nq" | ed -s CMakeLists.txt ) && \
 	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/FindGLEW.cmake ) && \
+	( printf "/ARCH x86/s/x86/x64/\nw\n" | ed -s cmake/FindDXSDK.cmake ) && \
 	$(CMAKE) \
 		$(COMMON_CMAKE_FLAGS) \
 		-DCMAKE_INSTALL_PREFIX="$(opensubd_PREFIX)" \
