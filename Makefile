@@ -182,7 +182,7 @@ $(eval $(call GIT_DOWNLOAD,ptex,v2.3.0,git://github.com/wdas/ptex.git))
 $(eval $(call GIT_DOWNLOAD,pyside,${QT_VERSION},git://code.qt.io/pyside/pyside-setup.git))
 $(eval $(call GIT_DOWNLOAD,pysidetools,${QT_VERSION},git://code.qt.io/pyside/pyside-tools.git))
 $(eval $(call GIT_DOWNLOAD,qt5base,${QT_VERSION},git://github.com/qt/qtbase.git))
-$(eval $(call GIT_DOWNLOAD,usd,v19.11,git://github.com/PixarAnimationStudios/USD.git))
+$(eval $(call GIT_DOWNLOAD,usd,v20.02,git://github.com/PixarAnimationStudios/USD.git))
 $(eval $(call GIT_DOWNLOAD,x264,master,http://git.videolan.org/git/x264.git))
 $(eval $(call GIT_DOWNLOAD,zlib,v1.2.8,git://github.com/madler/zlib.git))
 $(eval $(call GIT_DOWNLOAD,zmq,v4.3.0,git://github.com/zeromq/libzmq.git))
@@ -1405,26 +1405,23 @@ USD_STATIC_LIBS = \
 	"$(osl_PREFIX)/lib/$(LIB_PREFIX)oslquery$(STATICLIB_EXT)"
 
 USD_CMAKELISTS_WITH_BOOST = \
-	pxr/base/lib/plug/CMakeLists.txt \
-	pxr/base/lib/tf/CMakeLists.txt \
-	pxr/base/lib/trace/CMakeLists.txt \
-	pxr/base/lib/vt/CMakeLists.txt \
-	pxr/imaging/lib/glf/CMakeLists.txt \
-	pxr/usdImaging/lib/usdImagingGL/CMakeLists.txt \
-	pxr/usdImaging/lib/usdImaging/CMakeLists.txt \
-	pxr/usdImaging/lib/usdviewq/CMakeLists.txt \
-	pxr/usd/lib/ar/CMakeLists.txt \
-	pxr/usd/lib/ndr/CMakeLists.txt \
-	pxr/usd/lib/pcp/CMakeLists.txt \
-	pxr/usd/lib/sdf/CMakeLists.txt \
-	pxr/usd/lib/sdr/CMakeLists.txt \
-	pxr/usd/lib/usdGeom/CMakeLists.txt \
-	pxr/usd/lib/usdRi/CMakeLists.txt \
-	pxr/usd/lib/usdSkel/CMakeLists.txt \
-	pxr/usd/lib/usdUtils/CMakeLists.txt \
-	pxr/usd/lib/usd/CMakeLists.txt \
-	third_party/maya/lib/usdMaya/CMakeLists.txt \
-	third_party/maya/plugin/pxrUsdTranslators/CMakeLists.txt
+	pxr/base/plug/CMakeLists.txt \
+	pxr/base/tf/CMakeLists.txt \
+	pxr/base/trace/CMakeLists.txt \
+	pxr/base/vt/CMakeLists.txt \
+	pxr/imaging/glf/CMakeLists.txt \
+	pxr/usdImaging/usdImagingGL/CMakeLists.txt \
+	pxr/usdImaging/usdviewq/CMakeLists.txt \
+	pxr/usd/ar/CMakeLists.txt \
+	pxr/usd/ndr/CMakeLists.txt \
+	pxr/usd/pcp/CMakeLists.txt \
+	pxr/usd/sdf/CMakeLists.txt \
+	pxr/usd/sdr/CMakeLists.txt \
+	pxr/usd/usdGeom/CMakeLists.txt \
+	pxr/usd/usdRi/CMakeLists.txt \
+	pxr/usd/usdSkel/CMakeLists.txt \
+	pxr/usd/usdUtils/CMakeLists.txt \
+	pxr/usd/usd/CMakeLists.txt
 
 TBB_LIBRARY := "$(tbb_PREFIX)/lib"
 TBB_ROOT_DIR := "$(tbb_PREFIX)/include"
@@ -1448,8 +1445,6 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	git clone -q --no-checkout "$(WINDOWS_SOURCES_ROOT)/$(notdir $(usd_FILE))" $(notdir $(basename $(usd_FILE))) && \
 	cd $(notdir $(basename $(usd_FILE))) && \
 	git checkout -q $(usd_VERSION) && \
-	( test ! $(CURRENT_OS) == windows || test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0001-Weak-function-_ReadPlugInfoObject.patch" ) && \
-	( test ! $(CURRENT_OS) == windows || test ! $(USE_STATIC_BOOST) == ON || git apply "$(WINDOWS_THIS_DIR)\patches\0002-Ability-to-use-custom-log-output.patch" ) && \
 	( git apply "$(WINDOWS_THIS_DIR)/patches/0006-Bug-in-Intel-implementation-of-GL_ARB_shader_draw_pa.patch" ) && \
 	echo USD: Patching for supporting static OIIO... && \
 	( for f in $(USD_STATIC_LIBS); do ( printf "\044a\nlist(APPEND OIIO_LIBRARIES \"$$f\")\n.\nw\nq" | ed -s cmake/modules/FindOpenImageIO.cmake ); done ) && \
@@ -1460,11 +1455,8 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	echo USD: Patching for supporting MSVC2017... && \
 	( printf "/glew32s/s/glew32s/libglew32/\nw\nq" | ed -s cmake/modules/FindGLEW.cmake ) && \
 	( printf "/Zc:rvalueCast/d\nd\nd\na\nset(_PXR_CXX_FLAGS \"\044{_PXR_CXX_FLAGS} /Zc:rvalueCast /Zc:strictStrings /Zc:inline\")\n.\nw\nq" | ed -s cmake/defaults/msvcdefaults.cmake ) && \
-	echo USD: Patching for Maya support... && \
-	sed -i "/Program Files/d" cmake/modules/FindMaya.cmake && \
-	( printf "/find_package_handle_standard_args/\n/MAYA_EXECUTABLE/d\nd\nw\nq" | ed -s cmake/modules/FindMaya.cmake ) && \
 	echo USD: Cant irnore Unresolved_external_symbol_error_is_expected_Please_ignore because it always fails... && \
-	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/lib/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
+	( printf "/Unresolved_external_symbol_error_is_expected_Please_ignore/d\ni\nint Unresolved_external_symbol_error_is_expected_Please_ignore()\n{return 0;}\n.\nw\nq" | ed -s pxr/base/plug/testenv/TestPlugDsoUnloadable.cpp ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || echo USD: Dont skip plugins when building static libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/Skipping plugin/\nd\nd\na\nset(args_TYPE \"STATIC\")\n.\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
 	( test ! $(USE_STATIC_BOOST) == ON || printf "/CMAKE_SHARED_LIBRARY_SUFFIX/s/CMAKE_SHARED_LIBRARY_SUFFIX/CMAKE_STATIC_LIBRARY_SUFFIX/\nw\nq" | ed -s cmake/macros/Public.cmake ) && \
@@ -1488,9 +1480,7 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	( test 1 || printf "/USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY/s/false/true/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	( test 1 || printf "/property.sampleTimes.GetSize()/s/0/1/\nw\n" | ed -s pxr/usd/plugin/usdAbc/alembicReader.cpp ) && \
 	echo USD: OpenImageIO 2 support... && \
-	( printf "/image->get_pixels/s/0, storage.width, 0, storage.height, 0, 1/ROI(0, storage.width, 0, storage.height)/\nw\n" | ed -s pxr/imaging/lib/glf/oiioImage.cpp ) && \
-	echo USD: Maya glGetIntegeri_v bugfix... && \
-	( printf "/uniformBufferBindings/s/_UNIFORM_BINDINGS_TO_SAVE/glGetIntegeri_v ? _UNIFORM_BINDINGS_TO_SAVE : 0/\nw\n" | ed -s third_party/maya/lib/pxrUsdMayaGL/batchRenderer.cpp ) && \
+	( printf "/image->get_pixels/s/0, storage.width, 0, storage.height, 0, 1/ROI(0, storage.width, 0, storage.height)/\nw\n" | ed -s pxr/imaging/glf/oiioImage.cpp ) && \
 	mkdir -p build && cd build && \
 	mkdir -p $(ABSOLUTE_PREFIX_ROOT) && \
 	export PATH=$(ABSOLUTE_PREFIX_ROOT)/pyside/bin:$$PATH && \
