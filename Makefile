@@ -1523,12 +1523,12 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 		-DTBB_LIBRARY=$(TBB_LIBRARY) \
 		-DTBB_ROOT_DIR=$(TBB_ROOT_DIR) \
 		-DZLIB_ROOT:PATH="$(zlib_PREFIX)" \
-		.. > $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
+		.. && \
 	$(CMAKE) \
 		--build . \
 		--target install \
 		--config $(CMAKE_BUILD_TYPE) \
-		$(CMAKE_MAKE_FLAGS) >> $(ABSOLUTE_PREFIX_ROOT)/log_usd.txt 2>&1 && \
+		$(CMAKE_MAKE_FLAGS) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || echo USD: Including boost shared libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == windows || cmd /C copy $(subst /,\\,$(boost_PREFIX)/lib/*.dll) $(subst /,\\,$(usd_PREFIX)/lib) ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == linux || cp $(boost_PREFIX)/lib/*$(DYNAMICLIB_EXT) $(usd_PREFIX)/lib ) && \
