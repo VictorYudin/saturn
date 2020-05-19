@@ -16,7 +16,7 @@ install:
     - cmd: python\python.exe -m pip install PySide PyOpenGL Jinja2
 
     # GNU ed
-    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/ed/ed-1.14.1-1.tar.xz -o ed.tar.xz
+    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/ed/ed-1.16-1.tar.xz -o ed.tar.xz
     - cmd: tar -xf ed.tar.xz
 
     # unzip
