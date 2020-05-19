@@ -228,11 +228,13 @@ CMAKE := $(NOENV) $(cmake_PREFIX)/bin/cmake
 BOOST_LINK := static
 ifeq "$(BOOST_LINK)" "shared"
 USE_STATIC_BOOST := OFF
-BUILD_USD_MAYA_PLUGIN := ON
 else
 USE_STATIC_BOOST := ON
-BUILD_USD_MAYA_PLUGIN := OFF
 endif
+
+# Maya plugin moved to a dedicated repo, don't build it here by default anymore
+# https://github.com/Autodesk/maya-usd/releases
+BUILD_USD_MAYA_PLUGIN := OFF
 
 DEFINES = -DBOOST_ALL_NO_LIB -DPTEX_STATIC
 
