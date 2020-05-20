@@ -9,14 +9,14 @@ install:
     - cmd: set PATH=C:\Program Files\Git\cmd;C:\cygwin64\bin;C:\Program Files (x86)\CMake\bin;C:\Windows\System32;C:\Windows\System32\wbem
 
     # Python
-    - cmd: curl https://www.python.org/ftp/python/2.7.13/python-2.7.13.amd64.msi -o python.msi
+    - cmd: curl https://www.python.org/ftp/python/2.7.18/python-2.7.18.amd64.msi -o python.msi
     - cmd: msiexec /a python.msi /qb TARGETDIR=C:\projects\saturn\python
     - cmd: curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
     - cmd: python\python.exe get-pip.py
     - cmd: python\python.exe -m pip install PySide PyOpenGL Jinja2
 
     # GNU ed
-    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/ed/ed-1.14.1-1.tar.xz -o ed.tar.xz
+    - cmd: curl ftp://cygwin.osuosl.org/pub/cygwin/x86_64/release/ed/ed-1.16-1.tar.xz -o ed.tar.xz
     - cmd: tar -xf ed.tar.xz
 
     # unzip
@@ -34,10 +34,10 @@ install:
     - cmd: usr\bin\bison.exe --version
 
     # nasm
-    - cmd: curl https://www.nasm.us/pub/nasm/releasebuilds/2.14.01/win64/nasm-2.14.01-win64.zip -o nasm.zip
+    - cmd: curl https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/win64/nasm-2.14.02-win64.zip -o nasm.zip
     - cmd: usr\bin\unzip -q nasm.zip
-    - cmd: chmod -R u+x nasm-2.14.01/nasm.exe
-    - cmd: nasm-2.14.01\nasm.exe --version
+    - cmd: chmod -R u+x nasm-2.14.02/nasm.exe
+    - cmd: nasm-2.14.02\nasm.exe --version
 
     # jom
     - cmd: curl --tlsv1.2 -o jom.tar.xz -L https://github.com/VictorYudin/saturn-jom/releases/download/1.0.5/jom-v1.1.2.tar.xz
@@ -52,7 +52,7 @@ install:
     - cmd: tar -xf llvm.tar.xz
 
     # Put them to PATH
-    - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.14.01;C:\projects\saturn\jom\bin;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0
+    - cmd: set PATH=%PATH%;C:\projects\saturn\usr\bin;C:\projects\saturn\nasm-2.14.02;C:\projects\saturn\jom\bin;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0
 
     # MSVC environment
     - cmd: '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'

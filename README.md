@@ -36,7 +36,7 @@ recipes for building lots of VFX (and other) libraries:
 * zlib
 
 ## What's included?
-USD monolithic library, Python stuff, UsdView and Maya 2018 plugin. It's built
+USD monolithic library, Python stuff and UsdView. It's built
 with Visual Studio 2017 v15.x and linked with the static version of the run-time
 library.
 
@@ -52,10 +52,7 @@ sudo yum install -y nasm ed python-devel mesa-libGL-devel mesa-libGLES-devel mes
 
 ### Maya
 
-You need to add the path to the Maya plugin to the following environment
-variable:
-
-MAYA_MODULE_PATH | c:\usd\third_party\maya
+This repo does not provide a Maya plugin anymore, as there is an [official Maya USD plugin from Autodesk](https://github.com/Autodesk/maya-usd/releases) now.
 
 ### usdview
 

@@ -228,11 +228,13 @@ CMAKE := $(NOENV) $(cmake_PREFIX)/bin/cmake
 BOOST_LINK := static
 ifeq "$(BOOST_LINK)" "shared"
 USE_STATIC_BOOST := OFF
-BUILD_USD_MAYA_PLUGIN := ON
 else
 USE_STATIC_BOOST := ON
-BUILD_USD_MAYA_PLUGIN := OFF
 endif
+
+# Maya plugin moved to a dedicated repo, don't build it here by default anymore
+# https://github.com/Autodesk/maya-usd/releases
+BUILD_USD_MAYA_PLUGIN := OFF
 
 DEFINES = -DBOOST_ALL_NO_LIB -DPTEX_STATIC
 
@@ -1532,10 +1534,11 @@ $(usd_VERSION_FILE) : $(PyOpenGL_VERSION_FILE) $(alembic_VERSION_FILE) $(boost_V
 	( test ! $(USE_STATIC_BOOST) == OFF || echo USD: Including boost shared libraries... ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == windows || cmd /C copy $(subst /,\\,$(boost_PREFIX)/lib/*.dll) $(subst /,\\,$(usd_PREFIX)/lib) ) && \
 	( test ! $(USE_STATIC_BOOST) == OFF || test ! $(CURRENT_OS) == linux || cp $(boost_PREFIX)/lib/*$(DYNAMICLIB_EXT) $(usd_PREFIX)/lib ) && \
-	( test ! $(USE_STATIC_BOOST) == OFF || echo USD: Including Maya mod file... ) && \
+	( test ! $(BUILD_USD_MAYA_PLUGIN) == ON || echo USD: Including Maya mod file... ) && \
 	( test ! $(BUILD_USD_MAYA_PLUGIN) == ON || test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.mod) $(subst /,\\,$(usd_PREFIX)/third_party/maya) ) && \
-	( test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.cmd) $(subst /,\\,$(usd_PREFIX)) ) && \
 	( test ! $(BUILD_USD_MAYA_PLUGIN) == ON || test ! $(CURRENT_OS) == linux || 'cp' -r $(THIS_DIR)/patches/usd.mod $(usd_PREFIX)/third_party/maya ) && \
+	( test ! $(CURRENT_OS) == windows || echo USD: Including usd.cmd helper... ) && \
+	( test ! $(CURRENT_OS) == windows || cmd /C copy /Y $(subst \,\\,$(WINDOWS_THIS_DIR)\patches\usd.cmd) $(subst /,\\,$(usd_PREFIX)) ) && \
 	cd $(THIS_DIR) && \
 	echo $(usd_VERSION) > $@
 
